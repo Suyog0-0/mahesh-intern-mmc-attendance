@@ -2,12 +2,12 @@
 
 ## Stack (confirmed working as of 2026-09-24)
 - Next.js 16.3.6 (App Router, src/ dir, Turbopack), TypeScript strict
-- Tailwind CSS
+- Tailwind CSS v4 (dark mode via prefers-color-scheme in globals.css)
 - Drizzle ORM + Neon Postgres (serverless driver, @neondatabase/serverless,
   drizzle-orm/neon-http adapter)
-- Auth: custom JWT via `jose`, HTTP-only cookies, `bcryptjs` for password
-  hashing (NOT YET BUILT — next task)
-- Validation: Zod (installed, not yet used)
+- Auth: custom JWT via `jose` (HS256), HTTP-only cookie named `session`,
+  8-hour expiry, `bcryptjs` for password hashing — BUILT and LIVE
+- Validation: Zod — used in the login route handler
 - No calendar library — custom-built, per brief's "avoid bloat" direction
 - dotenv (dev dependency, used only in drizzle.config.ts to load .env.local)
 
@@ -43,35 +43,81 @@ Migration applied: drizzle/migrations/0000_ambiguous_slyde.sql (2026-09-24)
 Verified in Drizzle Studio (npx drizzle-kit studio) — all 5 tables exist with
 correct columns as of 2026-09-24.
 
-## Folder conventions
-- src/app/(auth)/login/ — created, EMPTY (no page.tsx yet)
-- src/app/(app)/dashboard/, attendance/, students/, calendar/ — created, EMPTY
-- src/lib/db/index.ts — EXISTS, exports `db` (drizzle client using neon-http)
-- src/lib/db/queries/ — created, EMPTY (no query files yet)
-- src/lib/auth/ — created, EMPTY (password hashing + JWT session helpers go here — NEXT TASK)
-- src/lib/validation/ — created, EMPTY (Zod schemas go here)
-- src/middleware.ts — DOES NOT EXIST YET (route protection — NEXT TASK)
-- drizzle.config.ts — EXISTS at project root, loads .env.local manually via
+## Current folder structure (matches git as of commit 9239f8d + login page)
+- src/app/login/ — LOGIN PAGE BUILT (page.tsx + login-form.tsx client component).
+  Serves the /login route middleware redirects to. Placed directly under
+  src/app/login/ per the folder tree in .clauderules (NOT the (auth) route
+  group — see "Discrepancies" below).
+- src/app/api/auth/{login,logout,me}/route.ts — BUILT, live API routes.
+  (Originally misplaced under src/lib/auth/, moved in session 3.)
+- src/lib/auth/jwt.ts — signSessionToken/verifySessionToken (jose, HS256,
+  SESSION_COOKIE_NAME="session", 8h max age).
+- src/lib/auth/session.ts — createSession/getSession/destroySession/requireRole
+  (cookie read/write via next/headers).
+- src/lib/auth/password.ts — bcryptjs hash/verify helpers.
+- src/lib/db/index.ts — exports `db` (drizzle client using neon-http).
+- src/middleware.ts — LIVE (renamed from middlware.ts in session 3). Public:
+  /login, /api/auth/login (+/_next*, /favicon*). Admin-only: /admin,
+  /api/admin. Unauthenticated pages redirect to /login?next=<path>;
+  unauthenticated API calls get 401 JSON.
+- drizzle.config.ts — at project root, loads .env.local manually via
   dotenv's config({ path: ".env.local" }) because drizzle-kit does NOT
   auto-load .env.local by default (only .env). See gotchas.md.
+- .env.example — EXISTS (added session 5): DATABASE_URL + JWT_SECRET placeholders.
+- scripts/seed-admin.ts — listed in .clauderules folder tree, NOT YET CREATED.
+- src/app/page.tsx — still the default create-next-app placeholder.
+- src/app/(auth)/ and src/app/(app)/ route-group folders from the original
+  scaffold existed only as EMPTY LOCAL DIRECTORIES — they never reached git
+  (git does not track empty dirs). Effectively they do not exist in the repo.
 
-## Auth model (planned, not yet implemented)
-- JWT stored in HTTP-only, secure, signed cookie. Session payload: { userId, role }.
-- Every server action/mutation re-checks role server-side — never trust client state.
-- middleware.ts blocks all (app) routes without a valid session cookie.
+## Auth model — IMPLEMENTED (as of 2026-09-24, sessions 3 + 5)
+- JWT (HS256, jose) stored in HTTP-only, secure-in-production, sameSite=lax
+  cookie named "session", 8-hour expiry.
+- Session payload: { userId, username, role }.
+- Login: POST /api/auth/login { username, password } — Zod-validated,
+  bcryptjs verify, generic "Invalid username or password" for ALL failures
+  (no user enumeration). Sets cookie, returns { user }.
+- Logout: POST /api/auth/logout — destroys session cookie.
+- Me: GET /api/auth/me — returns current session user or 401.
+- Every server action/mutation re-checks role server-side via
+  getSession()/requireRole() from src/lib/auth/session.ts — never trust
+  client state. Middleware is only the first layer.
+- Login page: client component posts to /api/auth/login, honors the
+  middleware's ?next= param (open-redirect-guarded), then router.replace +
+  router.refresh.
 
 ## Environment variables
 - DATABASE_URL (server-only, Neon connection string) — set in .env.local
   MANUALLY (not via `vercel env pull` — see gotchas.md for why)
-- JWT_SECRET (server-only) — NOT YET SET, needed for next task
+- JWT_SECRET (server-only) — REQUIRED at runtime (jwt.ts throws if unset).
+  Must be added to .env.local manually AND to Vercel env vars before the
+  deployed app can log anyone in. Generate: openssl rand -base64 32
 - No client-exposed (NEXT_PUBLIC_*) variables needed currently.
 - Vercel project has DATABASE_URL and related Neon vars set for Production
   and Preview via the Neon integration (auto-managed, locked, not manually
   editable in Vercel UI).
 
-## Open decisions / things to revisit
+## Discrepancies / open questions (flagged session 5)
+- .clauderules folder tree says src/app/login/page.tsx; an earlier scaffold
+  note said src/app/(auth)/login/. RESOLVED for now: using src/app/login/
+  because .clauderules is the standing authority. Route is /login either way.
+- .clauderules still references .claude/memory/MEMORY.md and a
+  memory-YYYY-MM-DD-HHMMSS.md naming format — both were replaced in the
+  session-4 reorg (timestamped memory-YYYYMMDD-HHMMSS.md snapshots, no
+  MEMORY.md). .clauderules needs its own update pass (not done yet).
 - Batch switching is fully manual (admin creates new batch, marks is_current).
 - Take-attendance screen only ever shows the current batch; past batches are
   read-only via student detail/history and calendar.
 - Bulk student upload is explicitly OUT of scope for now — manual add-student
   form only.
+
+## Next steps (in order, as of session 5)
+1. Add JWT_SECRET to .env.local (openssl rand -base64 32).
+2. scripts/seed-admin.ts — seed one admin user (hashPassword from
+   src/lib/auth/password.ts) so login can be tested end-to-end.
+3. Smoke-test: npm run dev -> /login redirects, login sets cookie, /api/auth/me
+   returns user, logout clears cookie.
+4. Replace src/app/page.tsx placeholder with a real dashboard redirect
+   (admin -> /admin or attendance view; decide landing page).
+5. Product surface: attendance-taking screen (the core workflow), students,
+   batches, leaves, calendar, reports — per .claude/docs/context.md.

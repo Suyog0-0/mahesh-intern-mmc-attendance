@@ -32,3 +32,20 @@ for local dev under the current Vercel/Neon integration setup.
 The brief/plan originally assumed Next.js 14 conventions. `create-next-app`
 installed 16.3.6, which is still App Router based, so nothing in the plan
 changed, but be aware version-specific docs/APIs should target Next 16.
+
+## Empty local folders never reach git (session 5 discovery)
+The route-group folders created in the original scaffold —
+`src/app/(auth)/login/`, `src/app/(app)/dashboard/` etc. — existed only as
+EMPTY directories on the local machine. Git does not track empty directories,
+so they were absent from every clone/push (confirmed via the GitHub tree API
+at commit 9239f8d). Don't assume a folder convention "exists" just because it
+was scaffolded locally — check `git ls-tree -r origin/main --name-only`.
+Same reason `.claude/docs/debug-reports/` vanished until a `.gitkeep` was
+added.
+
+## useSearchParams() needs a Suspense boundary (Next.js App Router)
+A client component that calls `useSearchParams()` (e.g. reading the
+middleware's `?next=` redirect param on /login) must be wrapped in
+<Suspense> by its parent page, or prerendering/build fails. Pattern used in
+src/app/login/page.tsx: server page renders <Suspense fallback={null}>
+around the client form component.
