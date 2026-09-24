@@ -1,0 +1,517 @@
+# Claude Code Rules — mahesh-intern-mmc-attendance
+## Folder Structure
+```text
+mahesh-intern-mmc-attendance/
+├── .claude/
+│   └── memory/
+│       ├── MEMORY.md
+│       ├── architecture.md
+│       ├── context.md
+│       ├── gotchas.md
+│       └── YYYY-MM-DD-HHMMSS.md
+├── drizzle/
+│   ├── schema.ts
+│   └── migrations/
+├── scripts/
+│   └── seed-admin.ts
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   └── auth/
+│   │   │       ├── login/
+│   │   │       ├── logout/
+│   │   │       └── me/
+│   │   ├── login/
+│   │   │   └── page.tsx
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── lib/
+│   │   ├── auth/
+│   │   │   ├── password.ts
+│   │   │   ├── jwt.ts
+│   │   │   └── session.ts
+│   │   └── db/
+│   │       └── index.ts
+│   └── middleware.ts
+├── drizzle.config.ts
+├── .env.example
+├── .clauderules
+└── package.json
+
+Project Context
+
+This is a Next.js 16 attendance management system for MMC interns.
+
+The application manages:
+
+* Intern/student records
+* Roll numbers
+* Names
+* Attendance and absence records
+* Total absence counts
+* Total absent days
+* Posting periods
+* Remarks
+* Batches
+* Leave records
+* Admin/staff users
+* Attendance reports and summaries
+
+The system uses:
+
+* Next.js 16 App Router
+* TypeScript
+* Drizzle ORM
+* PostgreSQL / Neon
+* Zod
+* jose for JWT
+* bcryptjs for password hashing
+
+The project is an internal attendance management application and should prioritize correctness, simplicity, maintainability, and secure server-side authorization.
+
+Critical Instructions
+
+1. ALWAYS read .claude/memory/architecture.md and the most recent .claude/memory/*.md session file before making code changes.
+2. NEVER assume the current implementation from memory. The memory files describe what is actually built, what is stubbed, and what decisions have already been made.
+3. NEVER put business logic directly inside page components or route handlers.
+4. Database query logic belongs in:
+    src/lib/db/
+    Add a queries/ subfolder when the number of queries grows.
+5. Authentication logic belongs in:
+    src/lib/auth/
+6. Validation schemas belong in:
+    src/lib/validation/
+7. Every API route that accepts a request body must validate it with Zod.
+8. Every mutation must perform authorization on the server.
+9. Never trust a user’s role, user ID, or permissions supplied by the client.
+10. Middleware is only the first layer of protection. Sensitive API operations must independently verify the authenticated session.
+11. Use getSession() or requireRole() from:
+    src/lib/auth/session.ts
+12. Never decode or verify the JWT on the client.
+13. Pages that need authentication state should use getSession() in a Server Component or call the appropriate authenticated API.
+14. Keep client-side role checks strictly for UX. They are never a security boundary.
+
+Database Rules
+
+1. drizzle/schema.ts is the source of truth for the database schema.
+2. NEVER manually write migration SQL.
+3. NEVER modify an already-applied migration.
+4. When the schema changes:
+    1. Edit drizzle/schema.ts
+    2. Run:
+        npx drizzle-kit generate
+    3. Review the generated migration
+    4. Apply it using the project’s configured Drizzle workflow
+5. Keep database-specific logic inside src/lib/db/.
+6. Do not duplicate database queries across multiple route handlers.
+7. Reuse shared query functions.
+8. Database constraints should be used where appropriate instead of relying only on application-level validation.
+
+Authentication Model
+
+Authentication uses:
+
+* JWT
+* HS256
+* jose
+* HTTP-only cookie
+* Cookie name: session
+* 8-hour session expiry
+
+JWT payload:
+
+{
+  userId,
+  username,
+  role
+}
+
+Valid roles are:
+
+admin
+staff
+
+Do not invent additional roles without updating the database schema and architecture documentation.
+
+The session cookie must use:
+
+httpOnly: true
+secure: true in production
+sameSite: "lax"
+path: "/"
+
+The JWT secret must come from:
+
+process.env.JWT_SECRET
+
+Never hard-code secrets.
+
+Login Security
+
+Login must always return the same generic authentication error:
+
+Invalid username or password
+
+Do not reveal whether:
+
+* The username exists
+* The password is incorrect
+* The account exists but is disabled
+* Any other account-specific information
+
+Do not create different HTTP responses that reveal whether a username exists.
+
+Passwords must be hashed using bcryptjs.
+
+Use the existing password helper instead of implementing password hashing directly inside route handlers.
+
+Middleware
+
+src/middleware.ts is responsible for:
+
+* Protecting authenticated routes
+* Redirecting unauthenticated page requests to /login
+* Returning 401 for unauthenticated API requests
+* Restricting admin-only routes
+* Allowing public authentication endpoints
+
+Do not rely exclusively on middleware for authorization.
+
+Every sensitive API mutation must perform its own server-side session/role check.
+
+Attendance Model
+
+Attendance records represent absences.
+
+There is NO present attendance status.
+
+A student is considered present when there is no absence record for that student on that date.
+
+Do not introduce a present enum or duplicate present records.
+
+When displaying attendance:
+
+* Existing absence record = absent
+* No absence record = present
+
+Queries should account for this model correctly.
+
+Attendance Requirements
+
+The system should support:
+
+* Student/intern name
+* Roll number
+* Posting period
+* Absence date
+* Total absence count
+* Total absent days
+* Remarks
+* Batch information
+* Leave information
+
+The application should also provide overall attendance summaries such as:
+
+* Total interns
+* Total absent records
+* Number of students with absences
+* Total absent days
+* Attendance/absence summaries by date
+* Attendance/absence summaries by batch where applicable
+
+Do not calculate totals inconsistently in different parts of the application.
+
+Prefer shared database queries or shared business logic for calculations.
+
+API Architecture
+
+Use this pattern:
+
+Client
+  ↓
+API Route Handler
+  ↓
+Zod Validation
+  ↓
+Authentication / Authorization
+  ↓
+Shared Business Logic
+  ↓
+Database Query
+  ↓
+JSON Response
+
+Route handlers should remain thin.
+
+A route handler should primarily:
+
+* Receive the request
+* Validate input
+* Authenticate/authorize
+* Call shared logic
+* Return the response
+
+Do not put large calculations, complex filtering, or database logic directly inside route handlers.
+
+Page Architecture
+
+Pages should focus on:
+
+* UI
+* User interaction
+* Presentation
+* Calling APIs/actions
+
+Do not put database queries or complex business rules directly into client components.
+
+Prefer Server Components where server-side data access is appropriate.
+
+Use Client Components only when interactivity requires them.
+
+Error Handling
+
+Use predictable API responses.
+
+Authentication errors should not leak sensitive information.
+
+Validation errors should be clear enough for legitimate users to correct their input.
+
+Do not expose:
+
+* Database connection strings
+* Stack traces
+* JWT secrets
+* Password hashes
+* Internal SQL errors
+* Sensitive server configuration
+
+in production API responses.
+
+Log useful server-side information when appropriate, but never log passwords, JWT secrets, or raw authentication credentials.
+
+Environment Variables
+
+.env.example may contain placeholders only.
+
+Example:
+
+DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
+JWT_SECRET=replace-with-a-long-random-string
+
+NEVER commit:
+
+.env.local
+.env
+real DATABASE_URL values
+real JWT_SECRET values
+passwords
+API keys
+private credentials
+
+If a new environment variable is introduced:
+
+1. Add a placeholder to .env.example
+2. Update the architecture documentation if it affects the system
+3. Never commit the real value
+
+Feature Development Process
+
+When adding a feature such as:
+
+* Students
+* Interns
+* Attendance
+* Leaves
+* Batches
+* Reports
+* Calendar
+* Dashboard
+* Admin management
+
+follow this order:
+
+1. Read architecture.md
+2. Read the latest session log
+3. Check existing schema
+4. Check existing shared business logic
+5. Check existing API patterns
+6. Modify the Drizzle schema if necessary
+7. Generate a migration
+8. Add/update Zod validation
+9. Add shared database/business logic
+10. Add API routes
+11. Add server-side authorization
+12. Add the UI
+13. Test the complete flow
+14. Update architecture.md
+15. Create a new timestamped session log
+
+Do not skip the documentation step.
+
+Existing Scope Decisions
+
+Before adding a feature, check:
+
+.claude/memory/architecture.md
+
+for existing scope decisions.
+
+Do not reintroduce features that were explicitly decided to be out of scope.
+
+Do not expand the project scope without documenting the decision.
+
+Code Quality
+
+Prefer:
+
+* Small reusable functions
+* Strong TypeScript types
+* Explicit return types for important shared functions
+* Shared validation
+* Shared database queries
+* Server-side authorization
+* Clear naming
+* Simple architecture
+* Minimal duplication
+
+Avoid:
+
+* any unless genuinely necessary
+* duplicated business logic
+* duplicated database queries
+* huge components
+* huge route handlers
+* unnecessary abstractions
+* unnecessary dependencies
+* client-side security checks
+* hard-coded credentials
+
+Next.js Rules
+
+This project uses Next.js 16.
+
+Do not blindly follow documentation written specifically for Next.js 14 if the API differs.
+
+Prefer the current Next.js 16 App Router conventions already used by the project.
+
+Do not introduce Pages Router patterns.
+
+Use:
+
+src/app/
+
+for application routes.
+
+Package Rules
+
+Before adding a dependency:
+
+1. Check whether the functionality already exists in the project.
+2. Check whether an existing dependency can solve the problem.
+3. Only add a new dependency when it provides a clear benefit.
+
+Do not replace existing project dependencies without a concrete reason.
+
+For JWT functionality, use:
+
+jose
+
+Do NOT replace it with:
+
+jsonwebtoken
+
+because the middleware uses the Edge-compatible jose implementation.
+
+Git Rules
+
+Before committing:
+
+1. Check git status
+2. Review changed files
+3. Make sure no secrets are included
+4. Make sure .env.local is ignored
+5. Run the relevant checks/tests
+6. Review the diff
+
+Use clear commit messages such as:
+
+feat: add student management
+fix: correct attendance summary
+feat: add leave tracking
+fix: protect admin attendance routes
+docs: update architecture memory
+
+Do not commit generated secrets or local environment files.
+
+Session Memory Rules
+
+At the end of every work session:
+
+1. Get the real timestamp using:
+
+date +"%Y-%m-%d-%H%M%S"
+
+2. Create:
+
+.claude/memory/YYYY-MM-DD-HHMMSS.md
+
+3. Never overwrite an existing session log.
+4. Never overwrite MEMORY.md.
+5. Update architecture.md in place when the current implementation changes.
+6. Record:
+
+* What was changed
+* What was tested
+* What remains incomplete
+* Important decisions
+* Any bugs/gotchas
+* Next recommended steps
+
+Testing Checklist
+
+Before considering a feature complete:
+
+* Business logic is outside route handlers
+* Database logic is inside src/lib/db/
+* Authentication logic is inside src/lib/auth/
+* Request bodies are validated with Zod
+* Server-side authorization exists
+* Client role checks are not treated as security
+* No secrets are committed
+* .env.example is updated if needed
+* Database changes use Drizzle migrations
+* Existing migrations were not manually modified
+* Authentication errors do not leak account information
+* Attendance logic does not introduce a present record/status
+* Relevant functionality has been tested
+* architecture.md is updated when needed
+* A timestamped session log has been created
+
+Documentation
+
+Important project documentation:
+
+.claude/memory/architecture.md
+.claude/memory/context.md
+.claude/memory/gotchas.md
+.claude/memory/MEMORY.md
+.claude/memory/YYYY-MM-DD-HHMMSS.md
+
+These files are the project’s persistent development context.
+
+Always read the relevant documentation before making changes.
+
+When implementation changes, keep the documentation synchronized with the actual codebase.
+
+Final Rule
+
+When uncertain about how to implement something:
+
+1. Read the existing code.
+2. Read architecture.md.
+3. Read the latest session log.
+4. Follow existing project patterns.
+5. Prefer the simplest implementation consistent with the architecture.
+6. Do not invent new architecture when an existing pattern already solves the problem.
+    EOF
+
