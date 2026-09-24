@@ -71,7 +71,7 @@ The project is an internal attendance management application and should prioriti
 
 Critical Instructions
 
-1. ALWAYS read .claude/memory/architecture.md and the most recent .claude/memory/*.md session file before making code changes.
+1. ALWAYS read .claude/docs/architecture.md and the most recent .claude/memory/memory-*.md session file before making code changes.
 2. NEVER assume the current implementation from memory. The memory files describe what is actually built, what is stubbed, and what decisions have already been made.
 3. NEVER put business logic directly inside page components or route handlers.
 4. Database query logic belongs in:
@@ -352,7 +352,7 @@ Existing Scope Decisions
 
 Before adding a feature, check:
 
-.claude/memory/architecture.md
+.claude/docs/architecture.md
 
 for existing scope decisions.
 
@@ -453,7 +453,7 @@ date +"%Y-%m-%d-%H%M%S"
 
 2. Create:
 
-.claude/memory/YYYY-MM-DD-HHMMSS.md
+.claude/memory/memory-YYYY-MM-DD-HHMMSS.md
 
 3. Never overwrite an existing session log.
 4. Never overwrite MEMORY.md.
@@ -491,11 +491,11 @@ Documentation
 
 Important project documentation:
 
-.claude/memory/architecture.md
-.claude/memory/context.md
-.claude/memory/gotchas.md
+.claude/docs/architecture.md
+.claude/docs/context.md
+.claude/docs/gotchas.md
 .claude/memory/MEMORY.md
-.claude/memory/YYYY-MM-DD-HHMMSS.md
+.claude/memory/memory-YYYY-MM-DD-HHMMSS.md
 
 These files are the project’s persistent development context.
 
