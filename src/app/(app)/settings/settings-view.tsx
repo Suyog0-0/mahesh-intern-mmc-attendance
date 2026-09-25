@@ -41,8 +41,10 @@ export function SettingsView({ session, currentBatch }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const [theme, setTheme] = useState<"light" | "dark" | "system">(() => {
-    if (typeof window === "undefined") return "system";
-    return (localStorage.getItem("theme") as "light" | "dark" | "system") || "system";
+    if (typeof window === "undefined") return "light";
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "system") return savedTheme;
+    return document.documentElement.classList.contains("dark") ? "dark" : "light";
   });
   const [passModalOpen, setPassModalOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -50,8 +52,11 @@ export function SettingsView({ session, currentBatch }: Props) {
   const [passError, setPassError] = useState<string | null>(null);
 
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "system") {
+      applyTheme(savedTheme);
+    }
+  }, []);
 
   function handleThemeChange(newTheme: "light" | "dark" | "system") {
     setTheme(newTheme);

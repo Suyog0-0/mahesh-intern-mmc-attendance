@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Download, Eye, FileSpreadsheet, Filter, Search } from "lucide-react";
+import { CalendarDays, Download, Eye, FileSpreadsheet, ListFilter, Search } from "lucide-react";
 import { Card } from "@/components/card";
 import { useStudentDrawer } from "@/components/student-drawer-context";
 import { formatDate } from "@/lib/date";
@@ -64,17 +64,17 @@ export function ReportView({ batches, batchId, summary }: Props) {
 
       {/* Date & Batch Filter Card */}
       <Card className="border-neutral-200/80 p-3 sm:p-3.5 dark:border-neutral-800">
-        <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500 dark:text-neutral-400">
-          <Filter className="h-3.5 w-3.5 text-[#9E1B32] dark:text-[#e8a3b0]" aria-hidden="true" />
+        <div className="mb-2 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-500 dark:text-neutral-400">
+          <ListFilter className="h-3.5 w-3.5 text-[#9E1B32] dark:text-[#e8a3b0]" aria-hidden="true" />
           Report filters
         </div>
         <div className="grid min-w-0 grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)] items-end gap-2 sm:grid-cols-[minmax(10rem,1.3fr)_minmax(9rem,1fr)_minmax(9rem,1fr)] sm:gap-3">
-          <label className="min-w-0 text-[10px] font-semibold text-neutral-600 dark:text-neutral-400">
-            <span className="mb-1 flex items-center gap-1"><Filter className="h-3 w-3 text-neutral-400" aria-hidden="true" />Batch</span>
+          <label className="min-w-0 text-[9px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400">
+            <span className="mb-1 flex items-center gap-1"><FileSpreadsheet className="h-3 w-3 text-violet-600 dark:text-violet-400" aria-hidden="true" />Batch</span>
             <select
               value={batchId}
               onChange={(e) => updateParams({ batchId: e.target.value })}
-              className="report-filter-control block h-11 w-full min-w-0 rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 text-xs font-semibold text-neutral-800 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/15 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 sm:h-9 sm:px-3"
+              className="report-filter-control report-filter-select block h-10 w-full min-w-0 rounded-lg border border-neutral-200 bg-neutral-50 px-2 text-[11px] font-medium text-neutral-800 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/15 sm:h-9 sm:px-2.5 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
             >
               {batches.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -83,22 +83,22 @@ export function ReportView({ batches, batchId, summary }: Props) {
               ))}
             </select>
           </label>
-          <label className="min-w-0 text-[10px] font-semibold text-neutral-600 dark:text-neutral-400">
+          <label className="min-w-0 text-[9px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400">
             <span className="mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3 text-blue-600 dark:text-blue-400" aria-hidden="true" />From</span>
             <input
               type="date"
               value={summary.from}
               onChange={(e) => updateParams({ from: e.target.value })}
-              className="report-filter-control report-date-input block h-11 w-full min-w-0 rounded-lg border border-blue-100 bg-blue-50/60 px-2 text-xs font-medium text-neutral-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-neutral-100 sm:h-9 sm:px-2.5"
+              className="report-filter-control report-date-input block h-10 w-full min-w-0 rounded-lg border border-blue-100 bg-blue-50/60 px-1.5 text-[11px] font-medium text-neutral-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 sm:h-9 sm:px-2 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-neutral-100"
             />
           </label>
-          <label className="min-w-0 text-[10px] font-semibold text-neutral-600 dark:text-neutral-400">
+          <label className="min-w-0 text-[9px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400">
             <span className="mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />To</span>
             <input
               type="date"
               value={summary.to}
               onChange={(e) => updateParams({ to: e.target.value })}
-              className="report-filter-control report-date-input block h-11 w-full min-w-0 rounded-lg border border-indigo-100 bg-indigo-50/60 px-2 text-xs font-medium text-neutral-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 dark:border-indigo-900/50 dark:bg-indigo-950/20 dark:text-neutral-100 sm:h-9 sm:px-2.5"
+              className="report-filter-control report-date-input block h-10 w-full min-w-0 rounded-lg border border-indigo-100 bg-indigo-50/60 px-1.5 text-[11px] font-medium text-neutral-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 sm:h-9 sm:px-2 dark:border-indigo-900/50 dark:bg-indigo-950/20 dark:text-neutral-100"
             />
           </label>
         </div>
