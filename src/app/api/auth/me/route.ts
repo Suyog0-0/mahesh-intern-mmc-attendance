@@ -10,6 +10,7 @@ export async function GET() {
     user: {
       id: session.userId,
       username: session.username,
+      name: session.name,
       role: session.role,
     },
   });

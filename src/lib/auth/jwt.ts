@@ -13,6 +13,7 @@ function getSecretKey() {
 export interface SessionPayload extends JWTPayload {
   userId: number;
   username: string;
+  name: string;
   role: "admin" | "staff";
 }
 
@@ -36,6 +37,7 @@ export async function verifySessionToken(
     if (
       typeof payload.userId !== "number" ||
       typeof payload.username !== "string" ||
+      typeof payload.name !== "string" ||
       (payload.role !== "admin" && payload.role !== "staff")
     ) {
       return null;
