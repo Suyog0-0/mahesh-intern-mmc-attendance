@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, lte } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { leaves, students } from "@/drizzle/schema";
+import { leaves, students, users } from "@/drizzle/schema";
 
 export type Leave = typeof leaves.$inferSelect;
 
@@ -12,6 +12,7 @@ export interface LeaveRow {
   startDate: string;
   endDate: string;
   reason: string | null;
+  createdByName: string | null;
 }
 
 const leaveRowColumns = {
@@ -22,6 +23,7 @@ const leaveRowColumns = {
   startDate: leaves.startDate,
   endDate: leaves.endDate,
   reason: leaves.reason,
+  createdByName: users.name,
 };
 
 export async function listLeavesForBatch(batchId: number): Promise<LeaveRow[]> {
@@ -29,6 +31,7 @@ export async function listLeavesForBatch(batchId: number): Promise<LeaveRow[]> {
     .select(leaveRowColumns)
     .from(leaves)
     .innerJoin(students, eq(leaves.studentId, students.id))
+    .leftJoin(users, eq(leaves.createdBy, users.id))
     .where(eq(students.batchId, batchId))
     .orderBy(desc(leaves.startDate), asc(students.rollNumber));
 }
@@ -43,15 +46,19 @@ export async function listLeavesOverlapping(
     .select(leaveRowColumns)
     .from(leaves)
     .innerJoin(students, eq(leaves.studentId, students.id))
+    .leftJoin(users, eq(leaves.createdBy, users.id))
     .where(
       and(eq(students.batchId, batchId), lte(leaves.startDate, to), gte(leaves.endDate, from)),
     );
 }
 
-export async function listStudentLeaves(studentId: number): Promise<Leave[]> {
+export async function listStudentLeaves(
+  studentId: number,
+): Promise<Array<Leave & { createdByName: string | null }>> {
   return db
-    .select()
+    .select({ ...getTableColumns(leaves), createdByName: users.name })
     .from(leaves)
+    .leftJoin(users, eq(leaves.createdBy, users.id))
     .where(eq(leaves.studentId, studentId))
     .orderBy(desc(leaves.startDate));
 }

@@ -7,6 +7,8 @@ import { Card } from "@/components/card";
 import { useStudentDrawer } from "@/components/student-drawer-context";
 import { formatDate } from "@/lib/date";
 import type { AttendanceSummary } from "@/lib/attendance/summary";
+import { Pagination } from "@/components/pagination";
+import { NepaliDateInput } from "@/components/nepali-date-input";
 
 interface Props {
   batches: { id: number; name: string }[];
@@ -18,6 +20,8 @@ export function ReportView({ batches, batchId, summary }: Props) {
   const router = useRouter();
   const { openStudent } = useStudentDrawer();
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   function updateParams(patch: Record<string, string>) {
     const params = new URLSearchParams({
@@ -40,6 +44,9 @@ export function ReportView({ batches, batchId, summary }: Props) {
         s.name.toLowerCase().includes(q),
     );
   }, [summary.students, searchTerm]);
+  const pageCount = Math.max(1, Math.ceil(filteredStudents.length / pageSize));
+  const visiblePage = Math.min(page, pageCount);
+  const visibleStudents = filteredStudents.slice((visiblePage - 1) * pageSize, visiblePage * pageSize);
 
   return (
     <div className="flex flex-col gap-6">
@@ -55,9 +62,9 @@ export function ReportView({ batches, batchId, summary }: Props) {
         </div>
         <a
           href={exportHref}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-300/80 bg-white px-4 py-2.5 text-xs font-semibold text-neutral-800 shadow-2xs hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-300/80 bg-white px-4 py-2.5 text-xs font-semibold text-neutral-800 shadow-2xs hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
         >
-          <Download className="h-4 w-4 text-[#9E1B32] dark:text-[#e8a3b0]" />
+          <Download className="h-4 w-4 text-[#1E4F91] dark:text-[#A9C5EA]" />
           <span>Export CSV Summary</span>
         </a>
       </div>
@@ -65,40 +72,38 @@ export function ReportView({ batches, batchId, summary }: Props) {
       {/* Date & Batch Filter Card */}
       <Card className="border-neutral-200/80 p-3 sm:p-3.5 dark:border-neutral-800">
         <div className="mb-2 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.12em] text-neutral-500 dark:text-neutral-400">
-          <ListFilter className="h-3.5 w-3.5 text-[#9E1B32] dark:text-[#e8a3b0]" aria-hidden="true" />
+          <ListFilter className="h-3.5 w-3.5 text-[#1E4F91] dark:text-[#A9C5EA]" aria-hidden="true" />
           Report filters
         </div>
-        <div className="grid min-w-0 grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)] items-end gap-2 sm:grid-cols-[minmax(10rem,1.3fr)_minmax(9rem,1fr)_minmax(9rem,1fr)] sm:gap-3">
-          <label className="min-w-0 text-[9px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400">
+        <div className="grid min-w-0 grid-cols-2 items-start gap-2 sm:grid-cols-[minmax(10rem,1.3fr)_minmax(9rem,1fr)_minmax(9rem,1fr)] sm:gap-3">
+          <label className="col-span-2 min-w-0 text-[10px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400 sm:col-span-1">
             <span className="mb-1 flex items-center gap-1"><FileSpreadsheet className="h-3 w-3 text-violet-600 dark:text-violet-400" aria-hidden="true" />Batch</span>
             <select
               value={batchId}
               onChange={(e) => updateParams({ batchId: e.target.value })}
-              className="report-filter-control report-filter-select block h-10 w-full min-w-0 rounded-lg border border-neutral-200 bg-neutral-50 px-2 text-[11px] font-medium text-neutral-800 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/15 sm:h-9 sm:px-2.5 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+              className="report-filter-control report-filter-select block h-10 w-full min-w-0 rounded-lg border border-neutral-200 bg-neutral-50 px-2 text-[11px] font-medium text-neutral-800 outline-none transition-colors focus:border-[#1E4F91] focus:ring-2 focus:ring-[#1E4F91]/15 sm:px-2.5 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
             >
-              {batches.map((b) => (
+            {batches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
-              ))}
+            ))}
             </select>
           </label>
-          <label className="min-w-0 text-[9px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400">
+          <label className="min-w-0 text-[10px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400">
             <span className="mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3 text-blue-600 dark:text-blue-400" aria-hidden="true" />From</span>
-            <input
-              type="date"
+            <NepaliDateInput
               value={summary.from}
-              onChange={(e) => updateParams({ from: e.target.value })}
-              className="report-filter-control report-date-input block h-10 w-full min-w-0 rounded-lg border border-blue-100 bg-blue-50/60 px-1.5 text-[11px] font-medium text-neutral-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 sm:h-9 sm:px-2 dark:border-blue-900/50 dark:bg-blue-950/20 dark:text-neutral-100"
+              onChange={(value) => updateParams({ from: value })}
+              className="report-filter-control report-date-input h-10 w-full min-w-0 border-blue-100 bg-blue-50/60 dark:border-blue-900/50 dark:bg-blue-950/20"
             />
           </label>
-          <label className="min-w-0 text-[9px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400">
+          <label className="min-w-0 text-[10px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400">
             <span className="mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />To</span>
-            <input
-              type="date"
+            <NepaliDateInput
               value={summary.to}
-              onChange={(e) => updateParams({ to: e.target.value })}
-              className="report-filter-control report-date-input block h-10 w-full min-w-0 rounded-lg border border-indigo-100 bg-indigo-50/60 px-1.5 text-[11px] font-medium text-neutral-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 sm:h-9 sm:px-2 dark:border-indigo-900/50 dark:bg-indigo-950/20 dark:text-neutral-100"
+              onChange={(value) => updateParams({ to: value })}
+              className="report-filter-control report-date-input h-10 w-full min-w-0 border-indigo-100 bg-indigo-50/60 dark:border-indigo-900/50 dark:bg-indigo-950/20"
             />
           </label>
         </div>
@@ -117,7 +122,7 @@ export function ReportView({ batches, batchId, summary }: Props) {
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-neutral-100 pb-4 dark:border-neutral-800">
           <div>
             <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4 text-[#9E1B32] dark:text-[#e8a3b0]" />
+              <FileSpreadsheet className="h-4 w-4 text-[#1E4F91] dark:text-[#A9C5EA]" />
               Intern Breakdown ({filteredStudents.length})
             </h2>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
@@ -130,9 +135,9 @@ export function ReportView({ batches, batchId, summary }: Props) {
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
             <input
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
               placeholder="Search intern name or roll #..."
-              className="w-full rounded-lg border border-neutral-300/80 bg-white pl-9 pr-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100"
+              className="w-full rounded-lg border border-neutral-300/80 bg-white pl-9 pr-3 py-1.5 text-xs text-neutral-900 outline-none focus:border-[#1E4F91] focus:ring-2 focus:ring-[#1E4F91]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100"
             />
           </div>
         </div>
@@ -153,7 +158,7 @@ export function ReportView({ batches, batchId, summary }: Props) {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
-              {filteredStudents.map((s) => (
+              {visibleStudents.map((s) => (
                 <tr
                   key={s.id}
                   onClick={() => openStudent(s.id)}
@@ -167,10 +172,10 @@ export function ReportView({ batches, batchId, summary }: Props) {
                   }}
                   title="Click to view full intern history"
                 >
-                  <td data-label="Roll #" className="px-4 py-3 font-mono font-medium text-neutral-500 group-hover:text-[#9E1B32] dark:text-neutral-400 dark:group-hover:text-[#e8a3b0]">
+                  <td data-label="Roll #" className="px-4 py-3 font-mono font-medium text-neutral-500 group-hover:text-[#1E4F91] dark:text-neutral-400 dark:group-hover:text-[#A9C5EA]">
                     {s.rollNumber}
                   </td>
-                  <td data-label="Name" className="px-4 py-3 font-semibold text-neutral-900 group-hover:text-[#9E1B32] dark:text-neutral-100 dark:group-hover:text-[#e8a3b0]">
+                  <td data-label="Name" className="px-4 py-3 font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">
                     {s.name}
                   </td>
                   <td data-label="Absent" className="px-4 py-3 text-right font-bold text-red-600 dark:text-red-400">
@@ -186,7 +191,7 @@ export function ReportView({ batches, batchId, summary }: Props) {
                     {s.absentDays}d
                   </td>
                   <td data-label="Profile" className="px-3 py-2 text-right">
-                    <button type="button" aria-label={`View ${s.name} profile`} onClick={(event) => { event.stopPropagation(); openStudent(s.id); }} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-[#9E1B32]/8 hover:text-[#9E1B32] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:text-neutral-400 dark:hover:text-[#e8a3b0]">
+                    <button type="button" aria-label={`View ${s.name} profile`} onClick={(event) => { event.stopPropagation(); openStudent(s.id); }} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-[#1E4F91]/8 hover:text-[#1E4F91] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:text-neutral-400 dark:hover:text-[#A9C5EA]">
                       <Eye className="h-4 w-4" aria-hidden="true" />
                     </button>
                   </td>
@@ -207,10 +212,10 @@ export function ReportView({ batches, batchId, summary }: Props) {
         </div>
 
         <ul className="grid gap-2.5 md:hidden">
-          {filteredStudents.map((student) => (
+          {visibleStudents.map((student) => (
             <li key={student.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-900">
-              <button type="button" onClick={() => openStudent(student.id)} className="flex w-full items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32]">
-                <span className="shrink-0 rounded-md bg-[#9E1B32]/8 px-2 py-1 font-mono text-xs font-bold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">#{student.rollNumber}</span>
+              <button type="button" onClick={() => openStudent(student.id)} className="flex w-full items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91]">
+                <span className="shrink-0 rounded-md bg-[#1E4F91]/8 px-2 py-1 font-mono text-xs font-bold text-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">#{student.rollNumber}</span>
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{student.name}</span>
                 <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300"><Eye className="h-4 w-4" /></span>
               </button>
@@ -224,6 +229,7 @@ export function ReportView({ batches, batchId, summary }: Props) {
           ))}
           {filteredStudents.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">{summary.students.length === 0 ? "No interns are in this batch yet." : "No interns match this search."}</li>}
         </ul>
+        <Pagination page={visiblePage} pageCount={pageCount} total={filteredStudents.length} pageSize={pageSize} onPageChange={setPage} />
       </Card>
     </div>
   );
