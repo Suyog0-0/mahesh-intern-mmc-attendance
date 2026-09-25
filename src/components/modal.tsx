@@ -1,6 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface ModalProps {
@@ -11,11 +12,6 @@ interface ModalProps {
   children: ReactNode;
 }
 
-/**
- * Shared modal shell. Wraps Radix Dialog with this project's card styling
- * (light/dark, TU-crimson accent) so every add/edit/confirm flow looks the
- * same. Use <Modal.Footer> for action buttons.
- */
 export function Modal({
   open,
   onOpenChange,
@@ -26,14 +22,14 @@ export function Modal({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/40" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl outline-none dark:border-neutral-800 dark:bg-neutral-950">
-          <div className="mb-4">
-            <Dialog.Title className="text-base font-semibold">
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs transition-opacity duration-150 animate-in fade-in" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-neutral-200/90 bg-white p-6 shadow-2xl outline-none duration-150 animate-in fade-in zoom-in-95 dark:border-neutral-800 dark:bg-neutral-900">
+          <div className="mb-4 pr-6">
+            <Dialog.Title className="text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
               {title}
             </Dialog.Title>
             {description && (
-              <Dialog.Description className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+              <Dialog.Description className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                 {description}
               </Dialog.Description>
             )}
@@ -41,10 +37,10 @@ export function Modal({
           {children}
           <Dialog.Close asChild>
             <button
-              aria-label="Close"
-              className="absolute right-3 top-3 rounded-md p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-900 dark:hover:text-neutral-200"
+              aria-label="Close dialog"
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
             >
-              ✕
+              <X className="h-4 w-4" />
             </button>
           </Dialog.Close>
         </Dialog.Content>
@@ -54,5 +50,5 @@ export function Modal({
 }
 
 Modal.Footer = function ModalFooter({ children }: { children: ReactNode }) {
-  return <div className="mt-5 flex gap-2">{children}</div>;
+  return <div className="mt-6 flex justify-end gap-2.5">{children}</div>;
 };
