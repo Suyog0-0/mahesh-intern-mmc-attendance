@@ -85,3 +85,12 @@ export async function deleteLeave(id: number): Promise<boolean> {
   const rows = await db.delete(leaves).where(eq(leaves.id, id)).returning({ id: leaves.id });
   return rows.length > 0;
 }
+
+export async function updateLeave(id: number, patch: {
+  startDate: string;
+  endDate: string;
+  reason: string | null;
+}): Promise<Leave | undefined> {
+  const [row] = await db.update(leaves).set(patch).where(eq(leaves.id, id)).returning();
+  return row;
+}

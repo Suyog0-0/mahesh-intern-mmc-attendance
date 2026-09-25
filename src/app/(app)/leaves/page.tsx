@@ -1,13 +1,16 @@
 import { requirePageSession } from "@/lib/auth/page-guards";
 import { getCurrentBatch } from "@/lib/db/queries/batches";
 import { listLeavesForBatch } from "@/lib/db/queries/leaves";
+import { listStudents } from "@/lib/db/queries/students";
 import { Card } from "@/components/card";
 import { LeavesManager } from "./leaves-manager";
 
 export default async function LeavesPage() {
   await requirePageSession();
   const batch = await getCurrentBatch();
-  const leaves = batch ? await listLeavesForBatch(batch.id) : [];
+  const [leaves, students] = batch
+    ? await Promise.all([listLeavesForBatch(batch.id), listStudents(batch.id)])
+    : [[], []];
 
   if (!batch) {
     return (
@@ -17,5 +20,5 @@ export default async function LeavesPage() {
     );
   }
 
-  return <LeavesManager batchName={batch.name} initialLeaves={leaves} />;
+  return <LeavesManager batchName={batch.name} initialLeaves={leaves} initialStudentCount={students.length} />;
 }
