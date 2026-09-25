@@ -1,15 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "@/components/card";
 import { Modal } from "@/components/modal";
+import { useToast } from "@/components/toast-provider";
 import { formatDate } from "@/lib/date";
 import type { Batch } from "@/lib/db/queries/batches";
 import {
   Plus,
   FolderKanban,
-  Calendar,
-  Users,
   CheckCircle2,
   Loader2,
   Pencil,
@@ -25,6 +23,7 @@ export function BatchesManager({
   initialBatches: BatchRow[];
 }) {
   const [batches, setBatches] = useState(initialBatches);
+  const { toast } = useToast();
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -91,6 +90,7 @@ export function BatchesManager({
           : prev;
         return [{ ...data.batch, studentCount: 0 }, ...next];
       });
+      toast({ tone: "success", title: "Batch created", description: data.batch.name });
       closeForm();
     } catch {
       setError("Network error — try again.");
@@ -120,6 +120,7 @@ export function BatchesManager({
           b.id === editTarget.id ? { ...b, ...data.batch } : b,
         ),
       );
+      toast({ tone: "success", title: "Batch updated", description: data.batch.name });
       closeEdit();
     } catch {
       setEditError("Network error — try again.");
@@ -142,6 +143,7 @@ export function BatchesManager({
         return;
       }
       setBatches((prev) => prev.filter((b) => b.id !== deleteTarget.id));
+      toast({ tone: "success", title: "Batch deleted", description: deleteTarget.name });
       closeDelete();
     } catch {
       setDeleteError("Network error — try again.");
@@ -152,15 +154,24 @@ export function BatchesManager({
 
   async function makeCurrent(id: number) {
     setSwitching(id);
-    const res = await fetch(`/api/batches/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isCurrent: true }),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch(`/api/batches/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isCurrent: true }),
+      });
+      if (!res.ok) {
+        toast({ tone: "error", title: "Could not change current batch", description: "Please try again." });
+        return;
+      }
       setBatches((prev) => prev.map((b) => ({ ...b, isCurrent: b.id === id })));
+      const batch = batches.find((item) => item.id === id);
+      toast({ tone: "success", title: "Current batch changed", description: batch?.name });
+    } catch {
+      toast({ tone: "error", title: "Network error", description: "The current batch was not changed." });
+    } finally {
+      setSwitching(null);
     }
-    setSwitching(null);
   }
 
   return (
@@ -186,77 +197,16 @@ export function BatchesManager({
         </button>
       </div>
 
-      <Card>
+      <section className="min-w-0">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
             All Batches ({batches.length})
           </h2>
         </div>
 
-        {/* Mobile Stacked Card View */}
-        <div className="grid gap-3 sm:hidden">
-          {batches.map((b) => (
-            <div
-              key={b.id}
-              className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-2xs dark:border-neutral-800 dark:bg-neutral-900"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-bold text-sm text-neutral-900 dark:text-neutral-100 truncate">
-                    {b.name}
-                  </span>
-                  {b.isCurrent && (
-                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Active
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium shrink-0">
-                  <Users className="h-3.5 w-3.5" />
-                  {b.studentCount}
-                </div>
-              </div>
-
-              <div className="mt-2 flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
-                <Calendar className="h-3.5 w-3.5" />
-                {formatDate(b.startDate)} – {formatDate(b.endDate)}
-              </div>
-
-              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-                {!b.isCurrent && (
-                  <button
-                    onClick={() => makeCurrent(b.id)}
-                    disabled={switching === b.id}
-                    className="text-xs font-semibold text-emerald-600 hover:underline disabled:opacity-50 dark:text-emerald-400"
-                  >
-                    {switching === b.id ? "Updating..." : "Set Current"}
-                  </button>
-                )}
-                <button
-                  onClick={() => openEdit(b)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Edit
-                </button>
-                {!b.isCurrent && (
-                  <button
-                    onClick={() => openDelete(b)}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-auto"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Desktop Table View */}
-        <div className="hidden sm:block overflow-x-auto rounded-lg border border-neutral-200/60 dark:border-neutral-800">
-          <table className="w-full text-left text-xs">
+        {/* Desktop table */}
+        <div className="hidden overflow-x-auto rounded-lg border border-neutral-200/60 dark:border-neutral-800 md:block">
+          <table className="w-full text-left text-xs min-w-[600px]">
             <thead>
               <tr className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
                 <th scope="col" className="px-4 py-3">Batch Name</th>
@@ -268,7 +218,7 @@ export function BatchesManager({
             <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
               {batches.map((b) => (
                 <tr key={b.id} className="transition-colors hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40">
-                  <td className="px-4 py-3.5">
+                  <td data-label="Batch" className="px-4 py-3.5">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-neutral-900 dark:text-neutral-100">{b.name}</span>
                       {b.isCurrent && (
@@ -279,13 +229,13 @@ export function BatchesManager({
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 text-neutral-600 dark:text-neutral-400 font-medium">
+                  <td data-label="Date Range" className="px-4 py-3.5 text-neutral-600 dark:text-neutral-400 font-medium">
                     {formatDate(b.startDate)} – {formatDate(b.endDate)}
                   </td>
-                  <td className="px-4 py-3.5 font-semibold text-neutral-800 dark:text-neutral-200">
+                  <td data-label="Interns" className="px-4 py-3.5 font-semibold text-neutral-800 dark:text-neutral-200">
                     {b.studentCount}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td data-label="Actions" className="px-4 py-3.5">
                     <div className="flex items-center justify-end gap-2">
                       {!b.isCurrent && (
                         <button
@@ -304,29 +254,64 @@ export function BatchesManager({
                         </button>
                       )}
                       <button
+                        type="button"
                         onClick={() => openEdit(b)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                        title="Edit"
+                        aria-label={`Edit ${b.name}`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-100 text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-blue-900/50 dark:text-blue-300 dark:hover:bg-blue-950/40"
                       >
                         <Pencil className="h-3.5 w-3.5" />
-                        Edit
                       </button>
                       {!b.isCurrent && (
                         <button
+                          type="button"
                           onClick={() => openDelete(b)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/30"
+                          title="Delete"
+                          aria-label={`Delete ${b.name}`}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/40"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                          Delete
                         </button>
                       )}
                     </div>
                   </td>
                 </tr>
               ))}
+              {batches.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-neutral-500 dark:text-neutral-400">
+                    No batches yet. Create a batch to start organizing interns.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-      </Card>
+
+        {/* Mobile batch records */}
+        <ul className="grid gap-3 md:hidden">
+          {batches.map((batch) => (
+            <li key={batch.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{batch.name}</h3>
+                    {batch.isCurrent && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">Current</span>}
+                  </div>
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{formatDate(batch.startDate)} – {formatDate(batch.endDate)}</p>
+                </div>
+                <span className="shrink-0 rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">{batch.studentCount} interns</span>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                {!batch.isCurrent && <button type="button" onClick={() => makeCurrent(batch.id)} disabled={switching === batch.id} className="min-h-9 rounded-lg bg-[#9E1B32]/8 px-3 text-xs font-semibold text-[#9E1B32] hover:bg-[#9E1B32]/15 disabled:opacity-50 dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">{switching === batch.id ? "Updating…" : "Make current"}</button>}
+                <button type="button" aria-label={`Edit ${batch.name}`} title="Edit batch" onClick={() => openEdit(batch)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-100 text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-blue-900/50 dark:text-blue-300 dark:hover:bg-blue-950/40"><Pencil className="h-4 w-4" /></button>
+                {!batch.isCurrent && <button type="button" aria-label={`Delete ${batch.name}`} title="Delete batch" onClick={() => openDelete(batch)} className="flex h-9 w-9 items-center justify-center rounded-lg text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:text-red-300 dark:hover:bg-red-950/40"><Trash2 className="h-4 w-4" /></button>}
+              </div>
+            </li>
+          ))}
+          {batches.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">No batches yet. Create a batch to start organizing interns.</li>}
+        </ul>
+      </section>
 
       {/* Create Batch Modal */}
       <Modal
@@ -537,4 +522,4 @@ export function BatchesManager({
 }
 
 const inputCls =
-  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-xs text-neutral-900 outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
+  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-base sm:text-xs text-neutral-900 outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";

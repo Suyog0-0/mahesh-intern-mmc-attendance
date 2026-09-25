@@ -7,13 +7,14 @@ import {
   KeyRound,
   Shield,
   Loader2,
-  CheckCircle2,
   Pencil,
   Trash2,
   ShieldCheck,
+  Eye,
+  EyeOff,
 } from "lucide-react";
-import { Card } from "@/components/card";
 import { Modal } from "@/components/modal";
+import { useToast } from "@/components/toast-provider";
 import type { PublicUser } from "@/lib/db/queries/users";
 
 const emptyForm = {
@@ -31,16 +32,17 @@ const emptyEditForm = {
 
 export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
   const [users, setUsers] = useState(initialUsers);
+  const { toast } = useToast();
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [showInitialPassword, setShowInitialPassword] = useState(false);
 
   // Reset password state
   const [resetTarget, setResetTarget] = useState<PublicUser | null>(null);
   const [resetPassword, setResetPassword] = useState("");
   const [resetError, setResetError] = useState<string | null>(null);
-  const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [resetPending, setResetPending] = useState(false);
 
   // Edit state
@@ -58,6 +60,7 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
     setFormOpen(false);
     setForm(emptyForm);
     setError(null);
+    setShowInitialPassword(false);
   }
 
   function closeReset() {
@@ -104,6 +107,7 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
         return;
       }
       setUsers((prev) => [...prev, data.user]);
+      toast({ tone: "success", title: "Account created", description: `@${data.user.username}` });
       closeForm();
     } catch {
       setError("Network error — try again.");
@@ -132,7 +136,7 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
         setResetError("Could not update password.");
         return;
       }
-      setResetMessage(`Password reset successfully for @${resetTarget.username}.`);
+      toast({ tone: "success", title: "Password updated", description: `@${resetTarget.username}` });
       closeReset();
     } catch {
       setResetError("Network error — try again.");
@@ -159,6 +163,7 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
         return;
       }
       setUsers((prev) => prev.map((u) => (u.id === editTarget.id ? data.user : u)));
+      toast({ tone: "success", title: "Account updated", description: `@${data.user.username}` });
       closeEdit();
     } catch {
       setEditError("Network error — try again.");
@@ -182,6 +187,7 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
         return;
       }
       setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+      toast({ tone: "success", title: "Account deleted", description: `@${deleteTarget.username}` });
       closeDelete();
     } catch {
       setDeleteError("Network error — try again.");
@@ -213,83 +219,16 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
         </button>
       </div>
 
-      <Card>
+      <section className="min-w-0">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
             Authorized Accounts ({users.length})
           </h2>
         </div>
 
-        {resetMessage && (
-          <div className="mb-4 rounded-lg bg-emerald-50 p-3 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            {resetMessage}
-          </div>
-        )}
-
-        {/* Mobile View Cards */}
-        <div className="grid gap-3 sm:hidden">
-          {users.map((u) => (
-            <div
-              key={u.id}
-              className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-2xs dark:border-neutral-800 dark:bg-neutral-900"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h3 className="font-bold text-sm text-neutral-900 dark:text-neutral-100 truncate">
-                    {u.name}
-                  </h3>
-                  <p className="text-xs font-mono text-neutral-400 truncate">@{u.username}</p>
-                </div>
-                <span
-                  className={`shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                    u.role === "admin"
-                      ? "bg-[#9E1B32]/10 text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]"
-                      : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
-                  }`}
-                >
-                  <Shield className="h-3 w-3" />
-                  {u.role}
-                </span>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-                <button
-                  onClick={() => openEdit(u)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Edit
-                </button>
-                <button
-                  onClick={() => {
-                    setResetTarget(u);
-                    setResetMessage(null);
-                  }}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-                >
-                  <KeyRound className="h-3.5 w-3.5" />
-                  Reset Password
-                </button>
-                <button
-                  onClick={() => openDelete(u)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-auto"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-          {users.length === 0 && (
-            <p className="py-6 text-center text-xs text-neutral-500 dark:text-neutral-400">
-              No accounts found.
-            </p>
-          )}
-        </div>
-
-        {/* Desktop Table View */}
-        <div className="hidden sm:block overflow-x-auto rounded-xl border border-neutral-200/60 dark:border-neutral-800">
-          <table className="w-full text-left text-xs">
+        {/* Desktop table */}
+        <div className="hidden overflow-x-auto rounded-xl border border-neutral-200/60 dark:border-neutral-800 md:block">
+          <table className="w-full text-left text-xs min-w-[600px]">
             <thead>
               <tr className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
                 <th scope="col" className="px-4 py-3">User</th>
@@ -301,7 +240,7 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
             <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
               {users.map((u) => (
                 <tr key={u.id} className="transition-colors hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40">
-                  <td className="px-4 py-3.5">
+                  <td data-label="User" className="px-4 py-3.5">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#9E1B32]/10 text-[10px] font-black text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">
                         {initials(u.name)}
@@ -309,10 +248,10 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
                       <span className="font-bold text-neutral-900 dark:text-neutral-100">{u.name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 font-mono text-neutral-600 dark:text-neutral-400">
+                  <td data-label="Username" className="px-4 py-3.5 font-mono text-neutral-600 dark:text-neutral-400">
                     @{u.username}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td data-label="Role" className="px-4 py-3.5">
                     <span
                       className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold capitalize ${
                         u.role === "admin"
@@ -328,40 +267,74 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
                       {u.role}
                     </span>
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td data-label="Actions" className="px-4 py-3.5">
                     <div className="flex items-center justify-end gap-2">
                       <button
+                        type="button"
                         onClick={() => openEdit(u)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                        title="Edit"
+                        aria-label={`Edit ${u.name}`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-100 text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-blue-900/50 dark:text-blue-300 dark:hover:bg-blue-950/40"
                       >
                         <Pencil className="h-3.5 w-3.5" />
-                        Edit
                       </button>
                       <button
+                        type="button"
                         onClick={() => {
                           setResetTarget(u);
-                          setResetMessage(null);
                         }}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                        title="Reset Password"
+                        aria-label={`Reset password for ${u.name}`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-sky-100 text-sky-700 transition-colors hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 dark:border-sky-900/50 dark:text-sky-300 dark:hover:bg-sky-950/40"
                       >
                         <KeyRound className="h-3.5 w-3.5" />
-                        Reset Password
                       </button>
                       <button
+                        type="button"
                         onClick={() => openDelete(u)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/30"
+                        title="Delete"
+                        aria-label={`Delete ${u.name}`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:border-red-900/40 dark:text-red-300 dark:hover:bg-red-950/40"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                        Delete
                       </button>
                     </div>
                   </td>
                 </tr>
               ))}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-neutral-500 dark:text-neutral-400">
+                    No staff accounts yet. Create an account to get started.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-      </Card>
+
+        {/* Mobile account records */}
+        <ul className="grid gap-3 md:hidden">
+          {users.map((user) => (
+            <li key={user.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#9E1B32]/8 text-xs font-bold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">{initials(user.name)}</span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{user.name}</h3>
+                  <p className="mt-0.5 truncate font-mono text-xs text-neutral-500 dark:text-neutral-400">@{user.username}</p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold capitalize ${user.role === "admin" ? "bg-[#9E1B32]/10 text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]" : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"}`}>{user.role}</span>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <button type="button" aria-label={`Edit ${user.name}`} title="Edit account" onClick={() => openEdit(user)} className="flex min-h-10 items-center justify-center rounded-lg border border-blue-100 text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-blue-900/50 dark:text-blue-300 dark:hover:bg-blue-950/40"><Pencil className="h-4 w-4" /></button>
+                <button type="button" aria-label={`Reset password for ${user.name}`} title="Reset password" onClick={() => setResetTarget(user)} className="flex min-h-10 items-center justify-center rounded-lg border border-sky-100 text-sky-700 transition-colors hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 dark:border-sky-900/50 dark:text-sky-300 dark:hover:bg-sky-950/40"><KeyRound className="h-4 w-4" /></button>
+                <button type="button" aria-label={`Delete ${user.name}`} title="Delete account" onClick={() => openDelete(user)} className="flex min-h-10 items-center justify-center rounded-lg text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:text-red-300 dark:hover:bg-red-950/40"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            </li>
+          ))}
+          {users.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">No staff accounts yet. Create an account to get started.</li>}
+        </ul>
+      </section>
 
       {/* Create Account Modal */}
       <Modal
@@ -403,15 +376,20 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
 
           <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             Initial Password <span className="font-normal text-neutral-400">(Min 8 chars)</span>
-            <input
-              required
-              type="password"
-              minLength={8}
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="••••••••"
-              className={inputCls}
-            />
+            <div className="relative mt-1.5">
+              <input
+                required
+                type={showInitialPassword ? "text" : "password"}
+                minLength={8}
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder="••••••••"
+                className={`${inputCls} pr-11`}
+              />
+              <button type="button" onClick={() => setShowInitialPassword((visible) => !visible)} aria-label={showInitialPassword ? "Hide initial password" : "Show initial password"} aria-pressed={showInitialPassword} className="absolute inset-y-0 right-1 flex w-9 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-neutral-800 dark:hover:text-neutral-100">
+                {showInitialPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </label>
 
           <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
@@ -649,4 +627,4 @@ function initials(name: string) {
 }
 
 const inputCls =
-  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-xs text-neutral-900 outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
+  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-base sm:text-xs text-neutral-900 outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
