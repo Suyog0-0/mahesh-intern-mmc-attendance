@@ -1,11 +1,16 @@
-// Date helpers. All dates in the app are plain "YYYY-MM-DD" strings (Postgres
-// `date` columns via Drizzle's default string mode). "Today" is always computed
-// in Nepal time so the Vercel server (UTC) never flips the day early/late.
+// Persistence and APIs use ISO Gregorian dates. User-facing dates and the
+// calendar use Bikram Sambat; today is evaluated in Nepal time.
+
+import NepaliDate, { dateConfigMap } from "nepali-date-converter";
 
 export const APP_TIME_ZONE = "Asia/Kathmandu";
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_RANGE_DAYS = 3660;
+const BS_MONTH_KEYS = [
+  "Baisakh", "Jestha", "Asar", "Shrawan", "Bhadra", "Aswin",
+  "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra",
+] as const;
 
 export function todayISO(now: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -48,13 +53,20 @@ export function eachDate(from: string, to: string): string[] {
 }
 
 export function isMonthString(value: unknown): value is string {
-  return typeof value === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+  if (typeof value !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return false;
+  const year = Number(value.slice(0, 4));
+  return year >= 2000 && year <= 2090 && Boolean(dateConfigMap[String(year)]);
 }
 
 export function monthBounds(month: string): { from: string; to: string } {
-  const [y, m] = month.split("-").map(Number);
-  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  return { from: `${month}-01`, to: `${month}-${String(last).padStart(2, "0")}` };
+  const [year, monthNumber] = month.split("-").map(Number);
+  const bsYear = dateConfigMap[String(year)];
+  const lastDay = bsYear?.[BS_MONTH_KEYS[monthNumber - 1]];
+  if (!lastDay) throw new RangeError("Bikram Sambat month is outside the supported date range.");
+  return {
+    from: toISODate(new NepaliDate(year, monthNumber - 1, 1)),
+    to: toISODate(new NepaliDate(year, monthNumber - 1, lastDay)),
+  };
 }
 
 export function shiftMonth(month: string, delta: number): string {
@@ -63,24 +75,52 @@ export function shiftMonth(month: string, delta: number): string {
   return d.toISOString().slice(0, 7);
 }
 
+function toISODate(date: NepaliDate): string {
+  const ad = date.getDateObject().AD;
+  return `${ad.year}-${String(ad.month + 1).padStart(2, "0")}-${String(ad.date).padStart(2, "0")}`;
+}
+
+export function bsDateToISO(year: number, monthIndex: number, day: number): string {
+  return toISODate(new NepaliDate(year, monthIndex, day));
+}
+
+export function bsMonthDayCount(month: string): number {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const bsYear = dateConfigMap[String(year)];
+  const lastDay = bsYear?.[BS_MONTH_KEYS[monthNumber - 1]];
+  if (!lastDay) throw new RangeError("Bikram Sambat month is outside the supported date range.");
+  return lastDay;
+}
+
 /** 0 = Sunday ... 6 = Saturday */
-export function weekdayOf(iso: string): number {
-  return new Date(`${iso}T00:00:00Z`).getUTCDay();
+export function bsWeekdayOfMonth(month: string): number {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new NepaliDate(year, monthNumber - 1, 1).getDay();
+}
+
+export function todayBSMonth(now: Date = new Date()): string {
+  const iso = todayISO(now);
+  const date = new NepaliDate(new Date(`${iso}T00:00:00Z`));
+  return `${date.getYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
 export function formatDate(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  try {
+    return new NepaliDate(new Date(`${iso}T00:00:00Z`)).format("DD/MM/YYYY", "en");
+  } catch {
+    return iso;
+  }
+}
+
+/** Format the ISO `start to end` posting-period value as Bikram Sambat. */
+export function formatPostingPeriod(period: string): string {
+  const parts = period.split(/\s+to\s+|\s+–\s+/);
+  if (parts.length !== 2 || !isISODate(parts[0]) || !isISODate(parts[1])) return period;
+  return `${formatDate(parts[0])} – ${formatDate(parts[1])}`;
 }
 
 export function formatMonth(month: string): string {
-  return new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-GB", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  const [year, monthNumber] = month.split("-").map(Number);
+  const monthName = BS_MONTH_KEYS[monthNumber - 1];
+  return monthName && Number.isInteger(year) ? `${monthName} ${year}` : month;
 }

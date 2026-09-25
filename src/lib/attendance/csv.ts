@@ -1,4 +1,5 @@
 import type { AttendanceSummary } from "./summary";
+import { formatDate } from "@/lib/date";
 
 // Cells that start with these characters can be executed as formulas by
 // spreadsheet apps; prefix them so exported names/remarks stay inert.
@@ -21,7 +22,10 @@ export function summaryToCsv(summary: AttendanceSummary): string {
   const rows = summary.students.map((s) => [
     s.rollNumber,
     s.name,
-    s.postingPeriod,
+    s.postingPeriod
+      .split(/\s+to\s+|\s+–\s+/)
+      .map((part) => /^\d{4}-\d{2}-\d{2}$/.test(part) ? formatDate(part) : part)
+      .join(" – "),
     s.absenceCount,
     s.lateCount,
     s.leaveDays,
