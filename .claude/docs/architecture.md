@@ -91,8 +91,7 @@ lateCount, leaveDays, absentDays, daily present/absent/late/leave counts).
   delete of a student's attendance+leaves).
 - `src/lib/db/queries/` — one file per table (`users.ts`, `batches.ts`,
   `students.ts`, `attendance.ts`, `leaves.ts`). Route handlers and
-  `service.ts` files call these; nothing queries `db` directly outside this
-  folder except the two service.ts files and scripts/seed-admin.ts.
+  `service.ts` files call these (includes `updateUser`, `deleteUser`, `deleteBatch`).
 - `src/lib/validation/` — one Zod schema file per resource
   (`auth.ts`, `users.ts`, `batches.ts`, `students.ts`, `attendance.ts`,
   `leaves.ts`, `reports.ts`, `common.ts` for shared primitives like
