@@ -5,11 +5,13 @@ import "./globals.css";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -20,14 +22,18 @@ export const metadata: Metadata = {
   description: "Intern attendance tracking for MMC.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-white text-neutral-900 dark:bg-black dark:text-neutral-50">
+      <body className={`${geistSans.className} min-h-full flex flex-col bg-white text-neutral-900 dark:bg-black dark:text-neutral-50`}>
         {children}
       </body>
     </html>
