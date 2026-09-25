@@ -14,7 +14,7 @@ import {
   updateStudent,
   type Student,
 } from "@/lib/db/queries/students";
-import { createLeave, deleteLeave, type Leave } from "@/lib/db/queries/leaves";
+import { createLeave, deleteLeave, updateLeave, type Leave } from "@/lib/db/queries/leaves";
 import { fail, ok, type Result } from "@/lib/result";
 
 // Shared business logic for admin-managed data: batches, students, leaves.
@@ -129,4 +129,13 @@ export async function addLeave(input: {
 
 export async function removeLeave(id: number): Promise<Result<{ deleted: true }>> {
   return (await deleteLeave(id)) ? ok({ deleted: true }) : fail(404, "Leave not found");
+}
+
+export async function editLeave(id: number, patch: {
+  startDate: string;
+  endDate: string;
+  reason: string | null;
+}): Promise<Result<Leave>> {
+  const updated = await updateLeave(id, patch);
+  return updated ? ok(updated) : fail(404, "Leave not found");
 }
