@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { UserCog, UserPlus, KeyRound, Shield, Loader2, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/card";
 import { Modal } from "@/components/modal";
 import type { PublicUser } from "@/lib/db/queries/users";
@@ -22,6 +23,7 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
   const [resetPassword, setResetPassword] = useState("");
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
+  const [resetPending, setResetPending] = useState(false);
 
   function closeForm() {
     setFormOpen(false);
@@ -60,71 +62,143 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
     }
   }
 
-  async function submitReset() {
-    if (!resetTarget) return;
+  async function submitReset(e: React.FormEvent) {
+    e.preventDefault();
+    if (!resetTarget || resetPending) return;
     if (resetPassword.length < 8) {
       setResetError("Password must be at least 8 characters.");
       return;
     }
-    const res = await fetch(`/api/admin/users/${resetTarget.id}/password`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: resetPassword }),
-    });
-    if (!res.ok) {
-      setResetError("Could not update password.");
-      return;
+    setResetPending(true);
+    setResetError(null);
+
+    try {
+      const res = await fetch(`/api/admin/users/${resetTarget.id}/password`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: resetPassword }),
+      });
+      if (!res.ok) {
+        setResetError("Could not update password.");
+        return;
+      }
+      setResetMessage(`Password reset successfully for @${resetTarget.username}.`);
+      closeReset();
+    } catch {
+      setResetError("Network error — try again.");
+    } finally {
+      setResetPending(false);
     }
-    setResetMessage(`Password updated for ${resetTarget.username}.`);
-    closeReset();
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">Staff Accounts</h1>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-neutral-200/80 pb-5 dark:border-neutral-800">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50 flex items-center gap-2">
+            <UserCog className="h-6 w-6 text-[#9E1B32] dark:text-[#e8a3b0]" />
+            Staff Accounts Management
+          </h1>
+          <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+            Create administrative and staff access accounts with role-based permissions
+          </p>
+        </div>
+
         <button
           onClick={() => setFormOpen(true)}
-          className="rounded-lg bg-[#9E1B32] px-4 py-2 text-sm font-semibold text-white hover:bg-[#7d1527] dark:hover:bg-[#b82540]"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#9E1B32] px-4 py-2.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#7d1527] focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-[#b82540]"
         >
-          + Create account
+          <UserPlus className="h-4 w-4" />
+          <span>Create Staff Account</span>
         </button>
       </div>
 
       <Card>
-        <h2 className="mb-3 text-sm font-semibold">
-          Accounts ({users.length})
-        </h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+            Authorized Accounts ({users.length})
+          </h2>
+        </div>
+
         {resetMessage && (
-          <p className="mb-3 text-sm text-neutral-500 dark:text-neutral-400">
+          <div className="mb-4 rounded-lg bg-emerald-50 p-3 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4" />
             {resetMessage}
-          </p>
+          </div>
         )}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+
+        {/* Mobile View Cards */}
+        <div className="grid gap-3 sm:hidden">
+          {users.map((u) => (
+            <div
+              key={u.id}
+              className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-2xs dark:border-neutral-800 dark:bg-neutral-900"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+                    {u.name}
+                  </h3>
+                  <p className="text-xs font-mono text-neutral-400">@{u.username}</p>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                  <Shield className="h-3 w-3 text-[#9E1B32] dark:text-[#e8a3b0]" />
+                  {u.role}
+                </span>
+              </div>
+              <div className="mt-3 border-t border-neutral-100 pt-3 dark:border-neutral-800 text-right">
+                <button
+                  onClick={() => {
+                    setResetTarget(u);
+                    setResetMessage(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#9E1B32] hover:underline dark:text-[#e8a3b0]"
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Reset Password
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Editorial Table View */}
+        <div className="hidden sm:block overflow-x-auto rounded-xl border border-neutral-200/60 dark:border-neutral-800">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr className="text-xs uppercase text-neutral-500 dark:text-neutral-400">
-                <th className="pb-2 pr-3">Username</th>
-                <th className="pb-2 pr-3">Name</th>
-                <th className="pb-2 pr-3">Role</th>
-                <th className="pb-2 pr-3" />
+              <tr className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
+                <th scope="col" className="px-4 py-3">User</th>
+                <th scope="col" className="px-4 py-3">Username</th>
+                <th scope="col" className="px-4 py-3">Role</th>
+                <th scope="col" className="px-4 py-3 text-right">Security Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-900">
+            <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
               {users.map((u) => (
-                <tr key={u.id}>
-                  <td className="py-2 pr-3">{u.username}</td>
-                  <td className="py-2 pr-3">{u.name}</td>
-                  <td className="py-2 pr-3 capitalize">{u.role}</td>
-                  <td className="py-2 pr-3 text-right">
+                <tr key={u.id} className="transition-colors hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40">
+                  <td className="px-4 py-3.5 font-bold text-neutral-900 dark:text-neutral-100">
+                    {u.name}
+                  </td>
+                  <td className="px-4 py-3.5 font-mono text-neutral-600 dark:text-neutral-400">
+                    @{u.username}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold capitalize text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                      <Shield className="h-3 w-3 text-[#9E1B32] dark:text-[#e8a3b0]" />
+                      {u.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5 text-right">
                     <button
                       onClick={() => {
                         setResetTarget(u);
                         setResetMessage(null);
                       }}
-                      className="text-xs font-medium text-neutral-500 hover:text-[#9E1B32] dark:text-neutral-400"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
                     >
-                      Reset password
+                      <KeyRound className="h-3.5 w-3.5" />
+                      Reset Password
                     </button>
                   </td>
                 </tr>
@@ -134,51 +208,59 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
         </div>
       </Card>
 
+      {/* Create Account Modal */}
       <Modal
         open={formOpen}
         onOpenChange={(open) => (open ? setFormOpen(true) : closeForm())}
-        title="Create account"
+        title="Create Staff Account"
+        description="Add a new authorized account for taking or managing attendance."
       >
         {error && (
           <div
             role="alert"
-            className="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-500/10 dark:text-red-400"
+            className="mb-3 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-950/40 dark:text-red-400"
           >
             {error}
           </div>
         )}
-        <form onSubmit={submit} className="grid gap-3">
-          <label className="block text-sm font-medium">
+        <form onSubmit={submit} className="grid gap-3.5 pt-1">
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+            Full Name
+            <input
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="e.g. Dr. Mahesh"
+              className={inputCls}
+            />
+          </label>
+
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             Username
             <input
               required
               value={form.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
+              placeholder="e.g. mahesh"
               className={inputCls}
             />
           </label>
-          <label className="block text-sm font-medium">
-            Full name
-            <input
-              required
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className={inputCls}
-            />
-          </label>
-          <label className="block text-sm font-medium">
-            Password
+
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+            Initial Password (Min 8 chars)
             <input
               required
               type="password"
               minLength={8}
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
+              placeholder="••••••••"
               className={inputCls}
             />
           </label>
-          <label className="block text-sm font-medium">
-            Role
+
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+            Role Permission
             <select
               value={form.role}
               onChange={(e) =>
@@ -186,76 +268,97 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
               }
               className={inputCls}
             >
-              <option value="staff">Staff</option>
-              <option value="admin">Admin</option>
+              <option value="staff">Staff (Attendance Logging)</option>
+              <option value="admin">Admin (Full System Control)</option>
             </select>
           </label>
+
           <Modal.Footer>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-[#9E1B32] px-4 py-2 text-sm font-semibold text-white hover:bg-[#7d1527] disabled:opacity-60 dark:hover:bg-[#b82540]"
-            >
-              {pending ? "Creating…" : "Create account"}
-            </button>
             <button
               type="button"
               onClick={closeForm}
-              className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium dark:border-neutral-700"
+              className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
               Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d1527] disabled:opacity-60 dark:hover:bg-[#b82540]"
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Creating…
+                </>
+              ) : (
+                "Create Account"
+              )}
             </button>
           </Modal.Footer>
         </form>
       </Modal>
 
+      {/* Reset Password Modal */}
       <Modal
         open={!!resetTarget}
         onOpenChange={(open) => !open && closeReset()}
-        title="Reset password"
+        title="Reset Account Password"
         description={
           resetTarget
-            ? `Set a new password for ${resetTarget.username}.`
+            ? `Set a new password for @${resetTarget.username} (${resetTarget.name}).`
             : undefined
         }
       >
         {resetError && (
           <div
             role="alert"
-            className="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-500/10 dark:text-red-400"
+            className="mb-3 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-950/40 dark:text-red-400"
           >
             {resetError}
           </div>
         )}
-        <label className="block text-sm font-medium">
-          New password
-          <input
-            type="password"
-            minLength={8}
-            value={resetPassword}
-            onChange={(e) => setResetPassword(e.target.value)}
-            className={inputCls}
-            placeholder="Min 8 characters"
-          />
-        </label>
-        <Modal.Footer>
-          <button
-            onClick={submitReset}
-            className="rounded-lg bg-[#9E1B32] px-4 py-2 text-sm font-semibold text-white hover:bg-[#7d1527] dark:hover:bg-[#b82540]"
-          >
-            Save
-          </button>
-          <button
-            onClick={closeReset}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium dark:border-neutral-700"
-          >
-            Cancel
-          </button>
-        </Modal.Footer>
+        <form onSubmit={submitReset} className="grid gap-3.5 pt-1">
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+            New Password (Min 8 characters)
+            <input
+              required
+              type="password"
+              minLength={8}
+              value={resetPassword}
+              onChange={(e) => setResetPassword(e.target.value)}
+              className={inputCls}
+              placeholder="Enter new password"
+            />
+          </label>
+          <Modal.Footer>
+            <button
+              type="button"
+              onClick={closeReset}
+              className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={resetPending}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d1527] disabled:opacity-60 dark:hover:bg-[#b82540]"
+            >
+              {resetPending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Updating…
+                </>
+              ) : (
+                "Save Password"
+              )}
+            </button>
+          </Modal.Footer>
+        </form>
       </Modal>
     </div>
   );
 }
 
 const inputCls =
-  "mt-1 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700";
+  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-xs text-neutral-900 outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
