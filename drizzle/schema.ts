@@ -14,11 +14,18 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-export const roleEnum = pgEnum("role", ["admin", "staff"]);
+export const roleEnum = pgEnum("role", ["admin", "staff", "superadmin"]);
 export const attendanceStatusEnum = pgEnum("attendance_status", [
   "absent",
   "late",
   "leave",
+  "present",
+]);
+export const attendanceDepartmentEnum = pgEnum("attendance_department", [
+  "cardiology",
+  "dermatology",
+  "psychiatry",
+  "other",
 ]);
 
 export const users = pgTable("users", {
@@ -74,10 +81,10 @@ export const attendanceRecords = pgTable(
       .references(() => students.id),
     date: date("date").notNull(),
     status: attendanceStatusEnum("status").notNull(),
+    department: attendanceDepartmentEnum("department"),
     remarks: text("remarks"),
     markedBy: integer("marked_by")
-      .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -98,8 +105,7 @@ export const leaves = pgTable(
     endDate: date("end_date").notNull(),
     reason: text("reason"),
     createdBy: integer("created_by")
-      .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("leaves_student_idx").on(table.studentId)]

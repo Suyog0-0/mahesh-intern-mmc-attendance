@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize, jsonError, handleError } from "@/lib/api";
-import { updateUserPasswordHash } from "@/lib/db/queries/users";
+import { updateOwnPasswordHash } from "@/lib/db/queries/users";
 import { hashPassword } from "@/lib/auth/password";
 import { z } from "zod";
 
@@ -20,7 +20,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const passwordHash = await hashPassword(parsed.data.password);
-    const updated = await updateUserPasswordHash(auth.data.userId, passwordHash);
+    const updated = await updateOwnPasswordHash(auth.data.userId, passwordHash);
     if (!updated) return jsonError("User not found", 404);
 
     return NextResponse.json({ success: true });

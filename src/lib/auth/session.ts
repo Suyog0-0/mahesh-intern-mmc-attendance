@@ -6,6 +6,8 @@ import {
   verifySessionToken,
   type SessionPayload,
 } from "./jwt";
+import type { AppRole } from "@/lib/auth/roles";
+import { getUserRoleById } from "@/lib/db/queries/users";
 
 export async function createSession(
   payload: Omit<SessionPayload, "iat" | "exp">,
@@ -34,9 +36,11 @@ export async function destroySession() {
 }
 
 export async function requireRole(
-  roles: Array<"admin" | "staff">,
+  roles: AppRole[],
 ): Promise<SessionPayload | null> {
   const session = await getSession();
-  if (!session || !roles.includes(session.role)) return null;
-  return session;
+  if (!session) return null;
+  const role = await getUserRoleById(session.userId);
+  if (!role || !roles.includes(role)) return null;
+  return { ...session, role };
 }

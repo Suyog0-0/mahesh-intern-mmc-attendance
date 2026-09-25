@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
+import { requireRole } from "@/lib/auth/session";
 
 export async function GET() {
-  const session = await getSession();
+  const session = await requireRole(["admin", "staff", "superadmin"]);
   if (!session) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }

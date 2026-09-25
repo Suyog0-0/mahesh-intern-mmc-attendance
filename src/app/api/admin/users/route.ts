@@ -24,6 +24,9 @@ export async function POST(request: NextRequest) {
 
   const body = await parseBody(request, createUserSchema);
   if (!body.ok) return body.response;
+  if (body.data.role === "superadmin" && auth.data.role !== "superadmin") {
+    return jsonError("Only a super admin can create super-admin accounts", 403);
+  }
 
   try {
     const passwordHash = await hashPassword(body.data.password);

@@ -1,8 +1,8 @@
 /**
- * One-time bootstrap: create the first admin user so login can be tested.
+ * Bootstrap an admin or super-admin account so login can be tested.
  *
  * Usage:
- *   npm run seed:admin -- --username=mahesh --password=... --name="Mahesh"
+ *   npm run seed:admin -- --username=owner --name="Owner" --role=superadmin
  * Or interactively:
  *   npm run seed:admin
  *
@@ -100,6 +100,15 @@ async function main() {
 
   const password =
     args.password ?? (await prompt(rl, "Password (min 8 chars): ", true));
+  if (args.role && args.role !== "admin" && args.role !== "superadmin") {
+    console.error("Role must be admin or superadmin.");
+    process.exit(1);
+  }
+  const requestedRole = args.role === "superadmin"
+    ? "superadmin"
+    : args.role === "admin"
+      ? "admin"
+      : undefined;
 
   rl.close();
 
@@ -120,28 +129,30 @@ async function main() {
     .from(users)
     .where(eq(users.username, username))
     .limit(1);
+  const role = requestedRole ?? existing?.role ?? "admin";
 
   if (existing) {
     await db
       .update(users)
       .set({
         passwordHash,
-        role: "admin",
+        name,
+        role,
       })
       .where(eq(users.id, existing.id));
 
     console.log(
-      `Updated existing user "${username}" — password reset, role set to admin.`,
+      `Updated existing user "${username}" — password reset, role set to ${role}.`,
     );
   } else {
     await db.insert(users).values({
       username,
       passwordHash,
-      role: "admin",
       name,
+      role,
     });
 
-    console.log(`Created admin user "${username}".`);
+    console.log(`Created ${role} user "${username}".`);
   }
 
   process.exit(0);

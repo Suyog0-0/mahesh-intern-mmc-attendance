@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
+import type { AppRole } from "@/lib/auth/roles";
 
 const encoder = new TextEncoder();
 
@@ -14,7 +15,7 @@ export interface SessionPayload extends JWTPayload {
   userId: number;
   username: string;
   name: string;
-  role: "admin" | "staff";
+  role: AppRole;
 }
 
 const SESSION_DURATION_SECONDS = 60 * 60 * 8; // 8 hours
@@ -38,7 +39,7 @@ export async function verifySessionToken(
       typeof payload.userId !== "number" ||
       typeof payload.username !== "string" ||
       typeof payload.name !== "string" ||
-      (payload.role !== "admin" && payload.role !== "staff")
+      (payload.role !== "admin" && payload.role !== "staff" && payload.role !== "superadmin")
     ) {
       return null;
     }
