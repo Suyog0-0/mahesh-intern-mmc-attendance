@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Pencil, Sparkles, Loader2 } from "lucide-react";
+import { X, Pencil, Sparkles, Loader2, CalendarPlus, CheckCircle2 } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDate } from "@/lib/date";
 import type { Student } from "@/lib/db/queries/students";
@@ -31,37 +31,93 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"timeline" | "leaves" | "info">("timeline");
 
-  useEffect(() => {
-    if (!studentId) return;
+  // Approve leave inline state
+  const [showLeaveForm, setShowLeaveForm] = useState(false);
+  const [leaveStartDate, setLeaveStartDate] = useState("");
+  const [leaveEndDate, setLeaveEndDate] = useState("");
+  const [leaveReason, setLeaveReason] = useState("");
+  const [leaveSubmitting, setLeaveSubmitting] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
+  const [leaveSuccess, setLeaveSuccess] = useState<string | null>(null);
 
-    let active = true;
+  const fetchHistory = useCallback((id: number) => {
+    setLoading(true);
+    setError(null);
 
-    queueMicrotask(() => {
-      if (active) {
-        setLoading(true);
-        setError(null);
-      }
-    });
-
-    fetch(`/api/students/${studentId}/history`)
+    fetch(`/api/students/${id}/history`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load intern history");
         return res.json();
       })
       .then((resData) => {
-        if (active) setData(resData);
+        setData(resData);
       })
       .catch((err) => {
-        if (active) setError(err.message ?? "Error fetching details");
+        setError(err.message ?? "Error fetching details");
       })
       .finally(() => {
-        if (active) setLoading(false);
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!studentId) {
+      return;
+    }
+
+    queueMicrotask(() => {
+      fetchHistory(studentId);
+    });
+  }, [studentId, fetchHistory]);
+
+  async function handleApproveLeave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!data || leaveSubmitting) return;
+
+    if (!leaveStartDate || !leaveEndDate) {
+      setLeaveError("Please select both Start Date and End Date.");
+      return;
+    }
+
+    if (leaveStartDate > leaveEndDate) {
+      setLeaveError("Start date cannot be after end date.");
+      return;
+    }
+
+    setLeaveSubmitting(true);
+    setLeaveError(null);
+    setLeaveSuccess(null);
+
+    try {
+      const res = await fetch("/api/leaves", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rollNumber: data.student.rollNumber,
+          startDate: leaveStartDate,
+          endDate: leaveEndDate,
+          reason: leaveReason || null,
+        }),
       });
 
-    return () => {
-      active = false;
-    };
-  }, [studentId]);
+      const result = await res.json();
+      if (!res.ok) {
+        setLeaveError(result.error ?? "Failed to approve leave");
+        return;
+      }
+
+      setLeaveSuccess("Approved leave recorded successfully.");
+      setShowLeaveForm(false);
+      setLeaveStartDate("");
+      setLeaveEndDate("");
+      setLeaveReason("");
+      fetchHistory(data.student.id);
+    } catch {
+      setLeaveError("Network error — try again.");
+    } finally {
+      setLeaveSubmitting(false);
+    }
+  }
 
   const isOpen = studentId !== null;
 
@@ -81,7 +137,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
               </button>
             </Dialog.Close>
 
-            {loading && (
+            {loading && !data && (
               <div className="py-2">
                 <div className="h-4 w-24 rounded bg-neutral-200 dark:bg-neutral-800 animate-pulse mb-2" />
                 <div className="h-7 w-48 rounded bg-neutral-200 dark:bg-neutral-800 animate-pulse mb-1" />
@@ -98,7 +154,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
               </div>
             )}
 
-            {data && !loading && (
+            {data && (
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-mono rounded-md bg-[#9E1B32]/10 px-2.5 py-0.5 text-xs font-semibold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">
@@ -115,21 +171,110 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                   Posting: <strong className="font-semibold text-neutral-700 dark:text-neutral-300">{data.student.postingPeriod}</strong>
                 </Dialog.Description>
 
-                {onEditStudent && (
+                <div className="mt-4 flex items-center gap-2">
                   <button
                     onClick={() => {
-                      onClose();
-                      onEditStudent(data.student);
+                      setLeaveError(null);
+                      setLeaveSuccess(null);
+                      setShowLeaveForm((prev) => !prev);
                     }}
-                    className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-neutral-300/80 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-2xs hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#9E1B32] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#7d1527] focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-[#b82540]"
                   >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit Student Record
+                    <CalendarPlus className="h-3.5 w-3.5" />
+                    {showLeaveForm ? "Cancel Leave" : "+ Record Leave"}
                   </button>
-                )}
+
+                  {onEditStudent && (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        onEditStudent(data.student);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300/80 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-2xs hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit Record
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
+
+          {/* Inline Approve Leave Form */}
+          {data && showLeaveForm && (
+            <form onSubmit={handleApproveLeave} className="border-b border-neutral-200/80 bg-blue-50/40 p-4 dark:border-neutral-800 dark:bg-blue-950/20">
+              <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5 mb-2">
+                <CalendarPlus className="h-4 w-4 text-[#9E1B32] dark:text-[#e8a3b0]" />
+                Record Approved Leave for {data.student.name}
+              </h4>
+
+              {leaveError && (
+                <p className="mb-2 text-xs text-red-600 dark:text-red-400 font-medium">{leaveError}</p>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    required
+                    type="date"
+                    value={leaveStartDate}
+                    onChange={(e) => setLeaveStartDate(e.target.value)}
+                    className="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-xs text-neutral-900 outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    required
+                    type="date"
+                    value={leaveEndDate}
+                    onChange={(e) => setLeaveEndDate(e.target.value)}
+                    className="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-xs text-neutral-900 outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                  />
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <label className="block text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+                  Reason (Optional)
+                </label>
+                <input
+                  value={leaveReason}
+                  onChange={(e) => setLeaveReason(e.target.value)}
+                  placeholder="e.g. Medical leave or family emergency"
+                  className="w-full rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 text-xs text-neutral-900 outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={leaveSubmitting}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {leaveSubmitting ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Recording Leave…
+                  </>
+                ) : (
+                  "Confirm & Save Leave"
+                )}
+              </button>
+            </form>
+          )}
+
+          {leaveSuccess && (
+            <div className="bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4" />
+              {leaveSuccess}
+            </div>
+          )}
 
           {/* Metrics summary */}
           {data && !loading && (
@@ -207,16 +352,16 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
 
           {/* Drawer Body */}
           <div className="flex-1 overflow-y-auto p-6">
-            {loading && (
+            {loading && !data && (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-[#9E1B32] dark:text-[#e8a3b0] mb-3" />
                 <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                  Fetching Intern Attendance History...
+                  Fetching Intern History...
                 </p>
               </div>
             )}
 
-            {data && !loading && activeTab === "timeline" && (
+            {data && activeTab === "timeline" && (
               <div>
                 {data.records.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-neutral-200/80 p-8 text-center text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
@@ -253,7 +398,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
               </div>
             )}
 
-            {data && !loading && activeTab === "leaves" && (
+            {data && activeTab === "leaves" && (
               <div className="space-y-3">
                 {data.leaves.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-neutral-200/80 p-8 text-center text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
@@ -288,7 +433,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
               </div>
             )}
 
-            {data && !loading && activeTab === "info" && (
+            {data && activeTab === "info" && (
               <div className="space-y-4 text-sm">
                 <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/60 p-4 dark:border-neutral-800 dark:bg-neutral-800/40">
                   <h4 className="font-semibold text-neutral-900 dark:text-neutral-100">
