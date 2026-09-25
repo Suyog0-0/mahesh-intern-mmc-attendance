@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { UserPlus, Search, Pencil, Trash2, Users, Calendar } from "lucide-react";
-import { Card } from "@/components/card";
+import { UserPlus, Search, Pencil, Trash2, Users, Eye } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { useStudentDrawer } from "@/components/student-drawer-context";
+import { useToast } from "@/components/toast-provider";
 import type { Student } from "@/lib/db/queries/students";
 import type { Batch } from "@/lib/db/queries/batches";
 
@@ -22,6 +22,7 @@ export function StudentsManager({
   initialStudents,
 }: Props) {
   const { openStudent } = useStudentDrawer();
+  const { toast } = useToast();
   const [students, setStudents] = useState(initialStudents);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -133,12 +134,21 @@ export function StudentsManager({
         return;
       }
       if (editingId) {
-        setStudents((prev) =>
-          prev.map((s) => (s.id === editingId ? data.student : s)),
-        );
+        if (data.student.batchId !== currentBatchId) {
+          setStudents((prev) => prev.filter((s) => s.id !== editingId));
+        } else {
+          setStudents((prev) =>
+            prev.map((s) => (s.id === editingId ? data.student : s)),
+          );
+        }
       } else {
         setStudents((prev) => [...prev, data.student]);
       }
+      toast({
+        tone: "success",
+        title: editingId ? "Intern record updated" : "Intern added",
+        description: `${data.student.name} · Roll #${data.student.rollNumber}`,
+      });
       closeForm();
     } catch {
       setError("Network error — try again.");
@@ -151,8 +161,18 @@ export function StudentsManager({
     if (!deleteTarget) return;
     const id = deleteTarget.id;
     setDeleteTarget(null);
-    const res = await fetch(`/api/students/${id}`, { method: "DELETE" });
-    if (res.ok) setStudents((prev) => prev.filter((s) => s.id !== id));
+    try {
+      const res = await fetch(`/api/students/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setStudents((prev) => prev.filter((s) => s.id !== id));
+        toast({ tone: "success", title: "Intern record deleted", description: deleteTarget.name });
+      } else {
+        const data = await res.json().catch(() => null);
+        toast({ tone: "error", title: "Could not delete intern", description: data?.error ?? "Please try again." });
+      }
+    } catch {
+      toast({ tone: "error", title: "Network error", description: "The intern record was not deleted." });
+    }
   }
 
   return (
@@ -177,7 +197,7 @@ export function StudentsManager({
       </div>
 
       {/* Main Intern Table Card */}
-      <Card>
+      <section className="min-w-0">
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
@@ -201,62 +221,9 @@ export function StudentsManager({
           </div>
         </div>
 
-        {/* Mobile View Cards */}
-        <div className="grid gap-3 sm:hidden">
-          {filtered.map((s) => (
-            <div
-              key={s.id}
-              onClick={() => openStudent(s.id)}
-              className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4 active:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-800/40 dark:active:bg-neutral-800"
-            >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-[#9E1B32] dark:text-[#e8a3b0]">
-                    #{s.rollNumber}
-                  </span>
-                  <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
-                    {s.name}
-                  </span>
-                </div>
-                <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-neutral-400" />
-                  {s.postingPeriod}
-                </p>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openEdit(s);
-                  }}
-                  className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-700"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteTarget(s);
-                  }}
-                  className="rounded-lg p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600 dark:text-neutral-400 dark:hover:bg-red-950/40 dark:hover:text-red-400"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ))}
-          {filtered.length === 0 && (
-            <p className="py-8 text-center text-xs text-neutral-500 dark:text-neutral-400">
-              No matching interns found.
-            </p>
-          )}
-        </div>
-
-        {/* Desktop Editorial Table */}
-        <div className="hidden sm:block overflow-x-auto rounded-xl border border-neutral-200/60 dark:border-neutral-800">
-          <table className="w-full text-left text-xs">
+        {/* Desktop table */}
+        <div className="hidden overflow-x-auto rounded-xl border border-neutral-200/60 dark:border-neutral-800 md:block">
+          <table className="w-full text-left text-xs min-w-[600px]">
             <thead>
               <tr className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
                 <th scope="col" className="px-4 py-3">Roll #</th>
@@ -280,35 +247,44 @@ export function StudentsManager({
                   }}
                   title="Click to view full intern history"
                 >
-                  <td className="px-4 py-3.5 font-mono font-bold text-[#9E1B32] group-hover:underline dark:text-[#e8a3b0]">
+                  <td data-label="Roll #" className="px-4 py-3.5 font-mono font-bold text-[#9E1B32] group-hover:underline dark:text-[#e8a3b0]">
                     #{s.rollNumber}
                   </td>
-                  <td className="px-4 py-3.5 font-semibold text-neutral-900 group-hover:text-[#9E1B32] dark:text-neutral-100 dark:group-hover:text-[#e8a3b0]">
+                  <td data-label="Full Name" className="px-4 py-3.5 font-semibold text-neutral-900 group-hover:text-[#9E1B32] dark:text-neutral-100 dark:group-hover:text-[#e8a3b0]">
                     {s.name}
                   </td>
-                  <td className="px-4 py-3.5 text-neutral-600 dark:text-neutral-400 font-mono">
+                  <td data-label="Posting Period" className="px-4 py-3.5 text-neutral-600 dark:text-neutral-400 font-mono">
                     {s.postingPeriod}
                   </td>
-                  <td className="px-4 py-3.5 text-right">
-                    <button
-                      type="button"
-                      onClick={(e) => {
+                  <td data-label="Actions" className="px-4 py-3.5 text-right">
+                      <button
+                        type="button"
+                        aria-label={`View ${s.name} profile`}
+                        onClick={(e) => { e.stopPropagation(); openStudent(s.id); }}
+                        className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-[#9E1B32] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-neutral-800 dark:hover:text-[#e8a3b0]"
+                      ><Eye className="h-4 w-4" /></button>
+                      <button
+                        type="button"
+                        aria-label={`Edit ${s.name}`}
+                        onClick={(e) => {
                         e.stopPropagation();
                         openEdit(s);
                       }}
-                      className="mr-3 font-semibold text-neutral-600 hover:text-[#9E1B32] dark:text-neutral-400 dark:hover:text-[#e8a3b0]"
+                      className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-lg text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-blue-950/40"
                     >
-                      Edit
+                      <Pencil className="h-4 w-4 inline-block" />
                     </button>
                     <button
                       type="button"
+                      title="Delete"
+                      aria-label={`Delete ${s.name}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setDeleteTarget(s);
                       }}
-                      className="font-semibold text-neutral-500 hover:text-red-600 dark:text-neutral-400 dark:hover:text-red-400"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:text-red-300 dark:hover:bg-red-950/40"
                     >
-                      Delete
+                      <Trash2 className="h-4 w-4 inline-block" />
                     </button>
                   </td>
                 </tr>
@@ -319,14 +295,45 @@ export function StudentsManager({
                     colSpan={4}
                     className="py-8 text-center text-xs text-neutral-500 dark:text-neutral-400"
                   >
-                    No matching interns found.
+                    {students.length === 0 ? "Add interns first to start managing this batch." : "No matching interns found."}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-      </Card>
+
+        {/* Mobile intern records */}
+        <ul className="grid gap-3 md:hidden">
+          {filtered.map((student) => (
+            <li key={student.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-900">
+              <button type="button" onClick={() => openStudent(student.id)} className="flex w-full min-w-0 items-start gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32]">
+                <span className="mt-0.5 shrink-0 rounded-md bg-[#9E1B32]/8 px-2 py-1 font-mono text-xs font-bold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">#{student.rollNumber}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{student.name}</span>
+                  <span className="mt-1 block text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Open intern profile</span>
+              </span>
+              <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300"><Eye className="h-4 w-4" /></span>
+              </button>
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Posting period</p>
+                  <p className="mt-0.5 truncate text-xs text-neutral-700 dark:text-neutral-300">{student.postingPeriod}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <button type="button" aria-label={`Edit ${student.name}`} title="Edit intern" onClick={() => openEdit(student)} className="flex h-9 w-9 items-center justify-center rounded-lg text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-blue-950/40">
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button type="button" aria-label={`Delete ${student.name}`} title="Delete intern" onClick={() => setDeleteTarget(student)} className="flex h-9 w-9 items-center justify-center rounded-lg text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:text-red-300 dark:hover:bg-red-950/40">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </li>
+          ))}
+          {filtered.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">{students.length === 0 ? "Add interns first to start managing this batch." : "No matching interns found."}</li>}
+        </ul>
+      </section>
 
       {/* Add / Edit Student Modal */}
       <Modal
@@ -383,7 +390,7 @@ export function StudentsManager({
           </Field>
 
           {/* Validated Date Range for Posting Period */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 rounded-xl border border-neutral-200/70 bg-neutral-50/60 p-3 sm:grid-cols-2 dark:border-neutral-800 dark:bg-neutral-800/30">
             <Field label="Posting Start Date">
               <input
                 required
@@ -469,7 +476,7 @@ export function StudentsManager({
 }
 
 const inputCls =
-  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
+  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-base sm:text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
 
 function Field({
   label,

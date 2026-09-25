@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Pencil, Sparkles, Loader2, CalendarPlus, CheckCircle2 } from "lucide-react";
+import { X, Pencil, Sparkles, Loader2, CalendarPlus, CheckCircle2, Download } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDate } from "@/lib/date";
@@ -31,9 +31,9 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"timeline" | "leaves" | "info">("timeline");
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
 
-  // Leave modal state
-  const [leaveModalOpen, setLeaveModalOpen] = useState(false);
+  // Leave form state
   const [leaveStartDate, setLeaveStartDate] = useState("");
   const [leaveEndDate, setLeaveEndDate] = useState("");
   const [leaveReason, setLeaveReason] = useState("");
@@ -71,18 +71,43 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
     });
   }, [studentId, fetchHistory]);
 
-  function openLeaveModal() {
+  function openLeaveForm() {
     setLeaveError(null);
     setLeaveSuccess(null);
     setLeaveStartDate("");
     setLeaveEndDate("");
     setLeaveReason("");
-    setLeaveModalOpen(true);
+    setIsLeaveModalOpen(true);
   }
 
-  function closeLeaveModal() {
-    setLeaveModalOpen(false);
+  function closeLeaveForm() {
+    setIsLeaveModalOpen(false);
     setLeaveError(null);
+  }
+
+  function downloadCSV() {
+    if (!data) return;
+    
+    const headers = ["Date", "Status", "Remarks"];
+    const rows = data.records.map((r) => [
+      formatDate(r.date),
+      r.status,
+      `"${r.remarks || ""}"`
+    ]);
+    
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(e => e.join(","))
+    ].join("\n");
+    
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `${data.student.name.replace(/\s+/g, "_")}_Attendance.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   async function handleApproveLeave(e: React.FormEvent) {
@@ -117,12 +142,12 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
 
       const result = await res.json();
       if (!res.ok) {
-        setLeaveError(result.error ?? "Failed to approve leave");
+        setLeaveError(result.error ?? "Failed to record leave");
         return;
       }
 
-      setLeaveSuccess("Approved leave recorded successfully.");
-      closeLeaveModal();
+      setLeaveSuccess("Leave recorded successfully.");
+      closeLeaveForm();
       fetchHistory(data.student.id);
     } catch {
       setLeaveError("Network error — try again.");
@@ -186,7 +211,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
 
                   <div className="mt-4 flex items-center gap-2">
                     <button
-                      onClick={openLeaveModal}
+                      onClick={openLeaveForm}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-[#9E1B32] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#7d1527] focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-[#b82540]"
                     >
                       <CalendarPlus className="h-3.5 w-3.5" />
@@ -205,6 +230,13 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                         Edit Record
                       </button>
                     )}
+                    <button
+                      onClick={downloadCSV}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300/80 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-2xs hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Export CSV
+                    </button>
                   </div>
                 </div>
               )}
@@ -276,7 +308,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                       : "border-transparent text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
                   }`}
                 >
-                  Approved Leaves ({data.leaves.length})
+                  Leaves ({data.leaves.length})
                 </button>
                 <button
                   onClick={() => setActiveTab("info")}
@@ -343,7 +375,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                 <div className="space-y-3">
                   {data.leaves.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-neutral-200/80 p-8 text-center text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
-                      No approved leave applications recorded.
+                      No leave applications recorded.
                     </div>
                   ) : (
                     data.leaves.map((l) => (
@@ -411,23 +443,22 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
         </Dialog.Portal>
       </Dialog.Root>
 
-      {/* Leave Recording Modal — rendered outside the Drawer to avoid z-index conflicts */}
+      {/* Record Leave Modal (Nested outside Dialog.Portal to render properly as a separate Modal context) */}
       <Modal
-        open={leaveModalOpen}
-        onOpenChange={(open) => (open ? setLeaveModalOpen(true) : closeLeaveModal())}
-        title="Record Approved Leave"
-        description={data ? `Record an approved leave period for ${data.student.name} (Roll #${data.student.rollNumber})` : undefined}
+        open={isLeaveModalOpen}
+        onOpenChange={(open) => (open ? setIsLeaveModalOpen(true) : closeLeaveForm())}
+        title="Record Leave"
+        description="Every day in this range counts as a leave day for the student unless attendance is separately marked for that date."
       >
         {leaveError && (
           <div
             role="alert"
-            className="mb-3 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-950/40 dark:text-red-400"
+            className="mb-4 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-950/40 dark:text-red-400"
           >
             {leaveError}
           </div>
         )}
-
-        <form onSubmit={handleApproveLeave} className="grid gap-4 pt-1">
+        <form onSubmit={handleApproveLeave} className="grid gap-4 pt-2">
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
               Start Date
@@ -450,21 +481,19 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
               />
             </label>
           </div>
-
           <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             Reason <span className="font-normal text-neutral-400">(Optional)</span>
             <input
               value={leaveReason}
               onChange={(e) => setLeaveReason(e.target.value)}
-              placeholder="e.g. Medical leave or family emergency"
+              placeholder="e.g. Medical leave"
               className={inputCls}
             />
           </label>
-
           <Modal.Footer>
             <button
               type="button"
-              onClick={closeLeaveModal}
+              onClick={closeLeaveForm}
               className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
               Cancel
@@ -480,7 +509,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                   Recording…
                 </>
               ) : (
-                "Confirm & Save Leave"
+                "Record Leave"
               )}
             </button>
           </Modal.Footer>
