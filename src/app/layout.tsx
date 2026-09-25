@@ -13,7 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MMC Attendance",
+  title: {
+    default: "MMC Attendance",
+    template: "%s · MMC Attendance",
+  },
   description: "Intern attendance tracking for MMC.",
 };
 
@@ -22,8 +25,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-white text-neutral-900 dark:bg-black dark:text-neutral-50">
+        {children}
+      </body>
     </html>
   );
 }
