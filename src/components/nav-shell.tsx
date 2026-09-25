@@ -16,6 +16,8 @@ import {
   LogOut,
   Settings,
   ShieldCheck,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { StudentDrawerProvider } from "@/components/student-drawer-context";
@@ -54,6 +56,19 @@ export function NavShell({ user, children }: NavShellProps) {
     ...moreLinks.map((l) => ({ ...l, icon: l.icon })),
   ];
   const moreActive = moreLinks.some((l) => l.href === pathname);
+
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return document.documentElement.classList.contains("dark");
+  });
+
+  function toggleTheme() {
+    const root = document.documentElement;
+    const nowDark = !root.classList.contains("dark");
+    root.classList.toggle("dark", nowDark);
+    localStorage.setItem("theme", nowDark ? "dark" : "light");
+    setIsDark(nowDark);
+  }
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -159,15 +174,26 @@ export function NavShell({ user, children }: NavShellProps) {
             </span>
           </Link>
 
-          <div className="relative" ref={dropdownRef}>
+          <div className="flex items-center gap-2">
+            {/* Theme toggle */}
             <button
               type="button"
-              onClick={() => setDropdownOpen((prev) => !prev)}
-              aria-label="Toggle profile menu"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-[#9E1B32]/10 text-xs font-bold text-[#9E1B32] transition-transform active:scale-95 dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]"
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800 transition-colors"
             >
-              {initials(user.name)}
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
+
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setDropdownOpen((prev) => !prev)}
+                aria-label="Toggle profile menu"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#9E1B32]/10 text-xs font-bold text-[#9E1B32] transition-transform active:scale-95 dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]"
+              >
+                {initials(user.name)}
+              </button>
 
             {/* Mobile Header Dropdown Popover */}
             {dropdownOpen && (
@@ -199,6 +225,7 @@ export function NavShell({ user, children }: NavShellProps) {
                 </button>
               </div>
             )}
+            </div>
           </div>
         </header>
 
