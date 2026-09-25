@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+
+export const dynamic = "force-dynamic";
 import { requirePageSession } from "@/lib/auth/page-guards";
 import { getCurrentBatch } from "@/lib/db/queries/batches";
 import { listStudents } from "@/lib/db/queries/students";

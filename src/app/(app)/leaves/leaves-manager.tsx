@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarPlus, Trash2, CalendarX } from "lucide-react";
-import { Card } from "@/components/card";
+import { CalendarPlus, Trash2, CalendarX, Eye } from "lucide-react";
 import { Modal } from "@/components/modal";
+import { useToast } from "@/components/toast-provider";
 import { useStudentDrawer } from "@/components/student-drawer-context";
 import { formatDate } from "@/lib/date";
 import type { LeaveRow } from "@/lib/db/queries/leaves";
@@ -18,6 +18,7 @@ export function LeavesManager({
   initialLeaves: LeaveRow[];
 }) {
   const { openStudent } = useStudentDrawer();
+  const { toast } = useToast();
   const [leaves, setLeaves] = useState(initialLeaves);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +52,7 @@ export function LeavesManager({
       const listRes = await fetch("/api/leaves");
       const listData = await listRes.json();
       if (listRes.ok) setLeaves(listData.leaves);
+      toast({ tone: "success", title: "Leave recorded", description: `${form.rollNumber} · ${formatDate(form.startDate)} – ${formatDate(form.endDate)}` });
       closeForm();
     } catch {
       setError("Network error — try again.");
@@ -63,15 +65,24 @@ export function LeavesManager({
     if (!deleteTarget) return;
     const id = deleteTarget.id;
     setDeleteTarget(null);
-    const res = await fetch(`/api/leaves/${id}`, { method: "DELETE" });
-    if (res.ok) setLeaves((prev) => prev.filter((l) => l.id !== id));
+    try {
+      const res = await fetch(`/api/leaves/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setLeaves((prev) => prev.filter((l) => l.id !== id));
+        toast({ tone: "success", title: "Leave record deleted", description: deleteTarget.name });
+      } else {
+        toast({ tone: "error", title: "Could not delete leave record", description: "Please try again." });
+      }
+    } catch {
+      toast({ tone: "error", title: "Network error", description: "The leave record was not deleted." });
+    }
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-neutral-200/80 pb-5 dark:border-neutral-800">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">Approved Leaves</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">Leave Records</h1>
           <p className="mt-1 text-xs font-medium text-neutral-500 dark:text-neutral-400">
             Active Batch: <strong className="font-semibold text-neutral-800 dark:text-neutral-200">{batchName}</strong>
           </p>
@@ -85,66 +96,20 @@ export function LeavesManager({
         </button>
       </div>
 
-      <Card>
+      <section className="min-w-0">
         <div className="mb-4">
           <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-            <CalendarX className="h-4 w-4 text-[#9E1B32] dark:text-[#e8a3b0]" />
-            Logged Leave Applications ({leaves.length})
+            <CalendarX className="h-4 w-4 text-blue-700 dark:text-blue-300" />
+            Logged Leave Applications <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-blue-800 dark:bg-blue-950/50 dark:text-blue-200">{leaves.length}</span>
           </h2>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
             Click any leave item to view complete intern profile & analytics
           </p>
         </div>
 
-        {/* Mobile Stacked Card View (Pixel 9 Pro / Mobile screens) */}
-        <div className="grid gap-3 sm:hidden">
-          {leaves.map((l) => (
-            <div
-              key={l.id}
-              onClick={() => openStudent(l.studentId)}
-              className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4 active:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-800/40 dark:active:bg-neutral-800"
-            >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-[#9E1B32] dark:text-[#e8a3b0]">
-                    #{l.rollNumber}
-                  </span>
-                  <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
-                    {l.name}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs font-mono text-neutral-600 dark:text-neutral-300">
-                  {formatDate(l.startDate)} – {formatDate(l.endDate)}
-                </p>
-                {l.reason && (
-                  <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-                    Reason: {l.reason}
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteTarget(l);
-                }}
-                aria-label="Delete leave"
-                className="rounded-lg p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600 dark:text-neutral-400 dark:hover:bg-red-950/40 dark:hover:text-red-400"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
-          {leaves.length === 0 && (
-            <p className="py-8 text-center text-xs text-neutral-500 dark:text-neutral-400">
-              No leave records logged yet.
-            </p>
-          )}
-        </div>
-
-        {/* Desktop Table View */}
-        <div className="hidden sm:block overflow-x-auto rounded-lg border border-neutral-200/60 dark:border-neutral-800">
-          <table className="w-full text-left text-xs">
+        {/* Desktop table */}
+        <div className="hidden overflow-x-auto rounded-lg border border-neutral-200/60 dark:border-neutral-800 md:block">
+          <table className="w-full text-left text-xs min-w-[600px]">
             <thead>
               <tr className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
                 <th scope="col" className="px-4 py-3">Student</th>
@@ -157,39 +122,27 @@ export function LeavesManager({
               {leaves.map((l) => (
                 <tr
                   key={l.id}
-                  onClick={() => openStudent(l.studentId)}
-                  className="group cursor-pointer transition-colors hover:bg-neutral-50/90 dark:hover:bg-neutral-800/40"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      openStudent(l.studentId);
-                    }
-                  }}
-                  title="Click to view full intern history"
+                  className="group transition-colors hover:bg-neutral-50/90 dark:hover:bg-neutral-800/40"
                 >
-                  <td className="px-4 py-3">
-                    <span className="font-mono font-medium text-neutral-500 group-hover:text-[#9E1B32] dark:text-neutral-400 dark:group-hover:text-[#e8a3b0]">
-                      #{l.rollNumber}
-                    </span>{" "}
-                    <span className="font-semibold text-neutral-900 group-hover:text-[#9E1B32] dark:text-neutral-100 dark:group-hover:text-[#e8a3b0]">
-                      {l.name}
-                    </span>
+                  <td data-label="Student" className="px-4 py-3">
+                    <button type="button" aria-label={`View ${l.name} profile`} onClick={() => openStudent(l.studentId)} className="inline-flex items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32]"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#9E1B32]/8 font-mono text-[10px] font-bold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">{l.rollNumber}</span><span className="font-semibold text-neutral-900 group-hover:text-[#9E1B32] dark:text-neutral-100 dark:group-hover:text-[#e8a3b0]">{l.name}</span><Eye className="ml-1 h-3.5 w-3.5 text-neutral-400" aria-hidden="true" /></button>
                   </td>
-                  <td className="px-4 py-3 text-neutral-600 font-mono dark:text-neutral-400">
+                  <td data-label="Dates" className="px-4 py-3 text-neutral-600 font-mono dark:text-neutral-400">
                     {formatDate(l.startDate)} – {formatDate(l.endDate)}
                   </td>
-                  <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{l.reason ?? "—"}</td>
-                  <td className="px-4 py-3 text-right">
+                  <td data-label="Reason" className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{l.reason ?? "—"}</td>
+                  <td data-label="Actions" className="px-4 py-3 text-right">
                     <button
                       type="button"
+                      title="Delete leave record"
+                      aria-label={`Delete leave for ${l.name}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         setDeleteTarget(l);
                       }}
-                      className="font-semibold text-neutral-500 hover:text-red-600 dark:text-neutral-400 dark:hover:text-red-400"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:text-red-300 dark:hover:bg-red-950/40"
                     >
-                      Delete
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </td>
                 </tr>
@@ -207,12 +160,38 @@ export function LeavesManager({
             </tbody>
           </table>
         </div>
-      </Card>
+
+        {/* Mobile leave records */}
+        <ul className="grid gap-3 md:hidden">
+          {leaves.map((leave) => (
+            <li key={leave.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="flex items-center justify-between gap-3">
+                <button type="button" aria-label={`View ${leave.name} profile`} onClick={() => openStudent(leave.studentId)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32]">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#9E1B32]/8 font-mono text-[10px] font-bold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">{leave.rollNumber}</span>
+                  <span className="min-w-0"><span className="block truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{leave.name}</span><span className="mt-0.5 block text-[10px] font-medium text-neutral-500 dark:text-neutral-400">Intern profile</span></span>
+                  <Eye className="ml-auto h-4 w-4 shrink-0 text-neutral-400" aria-hidden="true" />
+                </button>
+                <button type="button" aria-label={`Delete leave for ${leave.name}`} title="Delete leave" onClick={() => setDeleteTarget(leave)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:text-red-300 dark:hover:bg-red-950/40">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="mt-2.5 grid grid-cols-2 gap-2 rounded-lg bg-blue-50/70 p-2.5 dark:bg-blue-950/20">
+                <div><p className="text-[9px] font-bold uppercase tracking-wider text-blue-700/70 dark:text-blue-300/70">From</p><p className="mt-0.5 text-xs font-semibold tabular-nums text-blue-950 dark:text-blue-100">{formatDate(leave.startDate)}</p></div>
+                <div className="border-l border-blue-200 pl-2 dark:border-blue-900"><p className="text-[9px] font-bold uppercase tracking-wider text-blue-700/70 dark:text-blue-300/70">Through</p><p className="mt-0.5 text-xs font-semibold tabular-nums text-blue-950 dark:text-blue-100">{formatDate(leave.endDate)}</p></div>
+              </div>
+              {leave.reason && <div className="mt-2 border-l-2 border-neutral-200 pl-2.5 dark:border-neutral-700">
+                <p className="line-clamp-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{leave.reason}</p>
+              </div>}
+            </li>
+          ))}
+          {leaves.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">No leave records for this batch yet.</li>}
+        </ul>
+      </section>
 
       <Modal
         open={formOpen}
         onOpenChange={(open) => (open ? setFormOpen(true) : closeForm())}
-        title="Record Approved Leave"
+        title="Record Leave"
         description="Every day in this range counts as a leave day for the student unless attendance is separately marked for that date."
       >
         {error && (
@@ -312,4 +291,4 @@ export function LeavesManager({
 }
 
 const inputCls =
-  "mt-1 w-full rounded-lg border border-neutral-300/80 bg-white px-3.5 py-2 text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
+  "mt-1 w-full rounded-lg border border-neutral-300/80 bg-white px-3.5 py-2 text-base sm:text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";

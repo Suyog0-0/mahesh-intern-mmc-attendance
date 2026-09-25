@@ -6,10 +6,11 @@ import { Card } from "@/components/card";
 import { Modal } from "@/components/modal";
 import { StatusBadge } from "@/components/status-badge";
 import { useStudentDrawer } from "@/components/student-drawer-context";
-import { formatDate } from "@/lib/date";
+import { formatDate, todayISO } from "@/lib/date";
 import type { DayListRow } from "@/lib/attendance/service";
 import type { Student } from "@/lib/db/queries/students";
-import { Search, CheckCircle2, UserX, Clock, CalendarX, Plus, Loader2 } from "lucide-react";
+import { createSuccessAudioContext, useToast } from "@/components/toast-provider";
+import { Search, CheckCircle2, UserX, Clock, CalendarX, Plus, Loader2, UserPlus } from "lucide-react";
 
 type Status = "absent" | "late" | "leave";
 
@@ -62,13 +63,13 @@ export function AttendanceBoard({
   const shouldAutoOpen = searchParams.get("openModal") === "true";
 
   const { openStudent } = useStudentDrawer();
+  const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
   const [takeModalOpen, setTakeModalOpen] = useState(shouldAutoOpen);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<SelectedStudent | null>(null);
   const [activeStatusMarking, setActiveStatusMarking] = useState<Status | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const [records, setRecords] = useState(initialRecords);
   const [prevInitialRecords, setPrevInitialRecords] = useState(initialRecords);
@@ -91,6 +92,7 @@ export function AttendanceBoard({
     if (!q) return [];
 
     const filtered = allStudents.filter((s) => {
+      if (markedByStudentId.get(s.id)?.status === "absent") return false;
       const r = s.rollNumber.toLowerCase();
       const n = s.name.toLowerCase();
       return r === q || r.startsWith(q) || n.includes(q);
@@ -107,7 +109,7 @@ export function AttendanceBoard({
         return aR.localeCompare(bR, undefined, { numeric: true });
       })
       .slice(0, 8);
-  }, [allStudents, searchQuery]);
+  }, [allStudents, markedByStudentId, searchQuery]);
 
   function changeDate(newDate: string) {
     startTransition(() => router.push(`/attendance?date=${newDate}`));
@@ -115,13 +117,12 @@ export function AttendanceBoard({
 
   function handleSelectStudent(student: SelectedStudent) {
     setSelectedStudent(student);
-    setError(null);
   }
 
   async function mark(status: Status) {
     if (!selectedStudent || activeStatusMarking) return;
     setActiveStatusMarking(status);
-    setError(null);
+    const successAudio = createSuccessAudioContext();
 
     const targetStudent = selectedStudent;
     const previousRecords = [...records];
@@ -153,14 +154,23 @@ export function AttendanceBoard({
       const data = await res.json();
       if (!res.ok) {
         setRecords(previousRecords);
-        setError(data.error ?? "Could not record status");
+        toast({ tone: "error", title: "Attendance was not updated", description: data.error ?? "Please try again." });
+        if (successAudio) void successAudio.close();
         return;
       }
       setSelectedStudent(null);
       setSearchQuery("");
+      toast({
+        tone: status === "absent" ? "absent" : status === "late" ? "late" : "leave",
+        title: `${targetStudent.name} marked ${status === "leave" ? "on leave" : status}.`,
+        description: formatDate(date),
+        soundContext: successAudio,
+      });
+      router.refresh();
     } catch {
       setRecords(previousRecords);
-      setError("Network error — please try again.");
+      toast({ tone: "error", title: "Network error", description: "Attendance could not be saved." });
+      if (successAudio) void successAudio.close();
     } finally {
       setActiveStatusMarking(null);
     }
@@ -169,7 +179,9 @@ export function AttendanceBoard({
   async function confirmClear() {
     if (!clearTarget || isClearing) return;
     const studentId = clearTarget.studentId;
+    const studentName = clearTarget.name;
     setIsClearing(true);
+    const successAudio = createSuccessAudioContext();
 
     const previousRecords = [...records];
     setRecords((prev) => prev.filter((r) => r.studentId !== studentId));
@@ -181,13 +193,22 @@ export function AttendanceBoard({
       );
       if (!res.ok) {
         setRecords(previousRecords);
-        setError("Could not clear attendance");
+        toast({ tone: "error", title: "Could not mark present", description: "Please try again." });
+        if (successAudio) void successAudio.close();
       } else {
         setClearTarget(null);
+        toast({
+          tone: "present",
+          title: `${studentName} marked present.`,
+          description: formatDate(date),
+          soundContext: successAudio,
+        });
+        router.refresh();
       }
     } catch {
       setRecords(previousRecords);
-      setError("Network error — please try again.");
+      toast({ tone: "error", title: "Network error", description: "The present status was not saved." });
+      if (successAudio) void successAudio.close();
     } finally {
       setIsClearing(false);
     }
@@ -198,7 +219,7 @@ export function AttendanceBoard({
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6">
       {/* Editorial Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-neutral-200/80 pb-5 dark:border-neutral-800">
         <div>
@@ -210,24 +231,23 @@ export function AttendanceBoard({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:w-auto sm:flex sm:gap-3">
           <input
             type="date"
             value={date}
-            max={new Date().toISOString().slice(0, 10)}
+            max={todayISO()}
             onChange={(e) => changeDate(e.target.value)}
-            className="rounded-lg border border-neutral-300/80 bg-white px-3.5 py-2 text-xs font-semibold text-neutral-800 outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-200"
+            className="w-full min-w-0 rounded-lg border border-neutral-300/80 bg-white px-3.5 py-2 text-xs font-semibold text-neutral-800 outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-200 sm:w-auto"
           />
 
           <button
             type="button"
             onClick={() => {
-              setError(null);
               setSelectedStudent(null);
               setSearchQuery("");
               setTakeModalOpen(true);
             }}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-[#7d1527] focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-[#b82540]"
+            className="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-[#9E1B32] px-2.5 py-2 text-[11px] font-semibold text-white shadow-2xs transition-colors hover:bg-[#7d1527] focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-[#b82540] sm:gap-2 sm:px-4 sm:text-xs"
           >
             <Plus className="h-4 w-4" />
             <span>Take Attendance</span>
@@ -246,7 +266,15 @@ export function AttendanceBoard({
           </span>
         </div>
 
-        {sortedRecords.length === 0 ? (
+        {allStudents.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50/70 px-5 py-8 text-center dark:border-neutral-700 dark:bg-neutral-800/30">
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+              <UserPlus className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Add interns first</p>
+            <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-neutral-500 dark:text-neutral-400">There are no interns in this batch yet. Add interns before recording attendance.</p>
+          </div>
+        ) : sortedRecords.length === 0 ? (
           <div className="rounded-xl border border-dashed border-neutral-200/80 p-8 text-center text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
             <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 mb-2">
               <CheckCircle2 className="h-5 w-5" />
@@ -262,7 +290,7 @@ export function AttendanceBoard({
               <li
                 key={r.studentId}
                 onClick={() => openStudent(r.studentId)}
-                className="group flex cursor-pointer items-center justify-between gap-3 p-4 text-xs transition-colors hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40"
+                className="group flex cursor-pointer flex-wrap items-center justify-between gap-3 p-4 text-xs transition-colors hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -271,7 +299,7 @@ export function AttendanceBoard({
                   }
                 }}
               >
-                <div className="min-w-0 flex items-center gap-3">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3">
                   <span className="font-mono text-xs font-bold text-[#9E1B32] group-hover:underline dark:text-[#e8a3b0]">
                     #{r.rollNumber}
                   </span>
@@ -280,11 +308,11 @@ export function AttendanceBoard({
                   </span>
                   {r.source === "leave" && (
                     <span className="text-[11px] italic text-neutral-400">
-                      (Approved Leave)
+                      (On Leave)
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="ml-auto flex shrink-0 items-center gap-3">
                   <StatusBadge status={r.status} />
                   {r.source === "record" && (
                     <button
@@ -313,17 +341,13 @@ export function AttendanceBoard({
         description={`Record attendance exceptions for ${formatDate(date)}`}
       >
         <div className="flex flex-col gap-4 py-2">
-          {error && (
-            <div
-              role="alert"
-              className="rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-950/40 dark:text-red-400"
-            >
-              {error}
-            </div>
-          )}
-
           {!selectedStudent ? (
             <div className="relative">
+              {allStudents.length === 0 && (
+                <p className="mb-3 rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2.5 text-xs leading-5 text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/25 dark:text-blue-200">
+                  Add interns to this batch first. Attendance can be recorded after the batch has interns.
+                </p>
+              )}
               <div className="relative">
                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-neutral-400" />
                 <input
@@ -339,12 +363,13 @@ export function AttendanceBoard({
                 <ul className="mt-2 max-h-60 overflow-y-auto rounded-xl border border-neutral-200/90 bg-white shadow-xl dark:border-neutral-700 dark:bg-neutral-800 divide-y divide-neutral-100 dark:divide-neutral-700/60">
                   {searchSuggestions.map((s) => {
                     const marked = markedByStudentId.get(s.id);
+                    const isExactMatch = s.rollNumber.toLowerCase() === searchQuery.trim().toLowerCase();
                     return (
                       <li key={s.id}>
                         <button
                           type="button"
                           onClick={() => handleSelectStudent(s)}
-                          className="flex w-full items-center justify-between px-4 py-3 text-left text-xs transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-700/60"
+                          className={`flex w-full items-center justify-between px-4 py-3 text-left text-xs transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-700/60 ${isExactMatch ? 'bg-[#9E1B32]/10 dark:bg-[#e8a3b0]/10 border-l-2 border-[#9E1B32] dark:border-[#e8a3b0]' : ''}`}
                         >
                           <div className="flex items-center gap-2.5">
                             <span className="font-mono font-bold text-[#9E1B32] dark:text-[#e8a3b0]">

@@ -1,7 +1,7 @@
 import { requirePageSession } from "@/lib/auth/page-guards";
 import { getCurrentBatch } from "@/lib/db/queries/batches";
 import { getCalendarMonth } from "@/lib/attendance/service";
-import { todayISO } from "@/lib/date";
+import { isMonthString, todayISO } from "@/lib/date";
 import { Card } from "@/components/card";
 import { CalendarView } from "./calendar-view";
 
@@ -12,7 +12,7 @@ export default async function CalendarPage({
 }) {
   await requirePageSession();
   const { month: rawMonth } = await searchParams;
-  const month = rawMonth && /^\d{4}-\d{2}$/.test(rawMonth) ? rawMonth : todayISO().slice(0, 7);
+  const month = isMonthString(rawMonth) ? rawMonth : todayISO().slice(0, 7);
 
   const batch = await getCurrentBatch();
   if (!batch) {
