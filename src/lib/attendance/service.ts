@@ -55,8 +55,15 @@ export async function getBatchesOverview(): Promise<
 }
 
 export async function getStudentSummary(student: Student, batch: Batch) {
-  const from = batch.startDate;
-  const to = minDate(batch.endDate, todayISO());
+  // A student's leave history is not limited to the batch's date window. Keep
+  // the summary bounded to the student's posting period, while returning all
+  // recorded leave applications separately for the profile's Leaves tab.
+  const [postingStart, postingEnd] = student.postingPeriod.split(/\s+to\s+|\s+–\s+/);
+  const from = postingStart && /^\d{4}-\d{2}-\d{2}$/.test(postingStart) ? postingStart : batch.startDate;
+  const batchEnd = minDate(batch.endDate, todayISO());
+  const to = postingEnd && /^\d{4}-\d{2}-\d{2}$/.test(postingEnd)
+    ? minDate(postingEnd, batchEnd)
+    : batchEnd;
   const [records, leaves] = await Promise.all([
     listStudentHistory(student.id),
     listStudentLeaves(student.id),
