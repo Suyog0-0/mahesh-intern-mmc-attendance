@@ -10,7 +10,7 @@ import { formatDate, todayISO } from "@/lib/date";
 import type { DayListRow } from "@/lib/attendance/service";
 import type { Student } from "@/lib/db/queries/students";
 import { createSuccessAudioContext, useToast } from "@/components/toast-provider";
-import { Search, CheckCircle2, UserX, Clock, CalendarX, Plus, Loader2, UserPlus } from "lucide-react";
+import { Search, CheckCircle2, UserX, Clock, CalendarX, Plus, Loader2, UserPlus, X } from "lucide-react";
 
 type Status = "absent" | "late" | "leave";
 
@@ -258,10 +258,11 @@ export function AttendanceBoard({
       {/* Main Records Container */}
       <Card className={isPending ? "opacity-60 transition-opacity" : ""}>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
-            Recorded Exceptions ({sortedRecords.length})
-          </h2>
-          <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+          <div className="flex min-w-0 items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-[#9E1B32] dark:text-[#e8a3b0]" aria-hidden="true" />
+            <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">Recorded Exceptions <span className="ml-1 font-medium tabular-nums text-neutral-500">({sortedRecords.length})</span></h2>
+          </div>
+          <span className="shrink-0 rounded-md bg-neutral-50 px-2.5 py-1.5 text-[11px] font-medium tabular-nums text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
             {formatDate(date)}
           </span>
         </div>
@@ -275,22 +276,20 @@ export function AttendanceBoard({
             <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-neutral-500 dark:text-neutral-400">There are no interns in this batch yet. Add interns before recording attendance.</p>
           </div>
         ) : sortedRecords.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-neutral-200/80 p-8 text-center text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 mb-2">
-              <CheckCircle2 className="h-5 w-5" />
+          <div className="overflow-hidden rounded-xl border border-emerald-200/80 bg-emerald-50/40 dark:border-emerald-900/60 dark:bg-emerald-950/15">
+            <div className="flex items-center gap-3 px-4 py-4 sm:px-5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300"><CheckCircle2 className="h-5 w-5" /></span>
+              <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-emerald-950 dark:text-emerald-100">No exceptions today</p><p className="mt-0.5 text-xs text-emerald-800/80 dark:text-emerald-300/80">All {allStudents.length} interns are marked present for this date.</p></div>
+              <span className="hidden rounded-full border border-emerald-200 bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-emerald-800 sm:inline-flex dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">Clear</span>
             </div>
-            <p className="font-bold text-emerald-600 dark:text-emerald-400">
-              All Interns Present
-            </p>
-            <p className="mt-1">No absences or leaves logged for this date.</p>
           </div>
         ) : (
-          <ul className="divide-y divide-neutral-100 dark:divide-neutral-800/60 rounded-xl border border-neutral-200/60 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+          <ul className="grid gap-2.5">
             {sortedRecords.map((r) => (
               <li
                 key={r.studentId}
                 onClick={() => openStudent(r.studentId)}
-                className="group flex cursor-pointer flex-wrap items-center justify-between gap-3 p-4 text-xs transition-colors hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40"
+                className="group flex cursor-pointer items-center justify-between gap-3 border-b border-neutral-100 px-1 py-3 text-xs transition-colors last:border-0 hover:bg-neutral-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:border-neutral-800 dark:hover:bg-neutral-800/30 sm:px-2"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -299,20 +298,13 @@ export function AttendanceBoard({
                   }
                 }}
               >
-                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3">
-                  <span className="font-mono text-xs font-bold text-[#9E1B32] group-hover:underline dark:text-[#e8a3b0]">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md font-mono text-[10px] font-semibold ${r.status === "absent" ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300" : r.status === "late" ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300" : "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"}`}>
                     #{r.rollNumber}
                   </span>
-                  <span className="font-semibold text-neutral-900 group-hover:text-[#9E1B32] dark:text-neutral-100 dark:group-hover:text-[#e8a3b0]">
-                    {r.name}
-                  </span>
-                  {r.source === "leave" && (
-                    <span className="text-[11px] italic text-neutral-400">
-                      (On Leave)
-                    </span>
-                  )}
+                  <span className="min-w-0 truncate text-sm font-semibold text-neutral-900 group-hover:text-[#9E1B32] dark:text-neutral-100 dark:group-hover:text-[#e8a3b0]">{r.name}</span>
                 </div>
-                <div className="ml-auto flex shrink-0 items-center gap-3">
+                <div className="flex shrink-0 items-center gap-2">
                   <StatusBadge status={r.status} />
                   {r.source === "record" && (
                     <button
@@ -321,9 +313,10 @@ export function AttendanceBoard({
                         e.stopPropagation();
                         setClearTarget(r);
                       }}
-                      className="font-semibold text-neutral-400 transition-colors hover:text-[#9E1B32] dark:hover:text-[#e8a3b0]"
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-[#9E1B32] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-neutral-800 dark:hover:text-[#e8a3b0]"
+                      aria-label={`Clear ${r.status} status for ${r.name}`}
                     >
-                      Clear
+                      <X className="h-4 w-4" aria-hidden="true" />
                     </button>
                   )}
                 </div>
