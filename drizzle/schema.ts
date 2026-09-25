@@ -9,7 +9,10 @@ import {
   pgEnum,
   integer,
   unique,
+  index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const roleEnum = pgEnum("role", ["admin", "staff"]);
 export const attendanceStatusEnum = pgEnum("attendance_status", [
@@ -27,14 +30,23 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const batches = pgTable("batches", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 128 }).notNull(),
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
-  isCurrent: boolean("is_current").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const batches = pgTable(
+  "batches",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 128 }).notNull(),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date").notNull(),
+    isCurrent: boolean("is_current").notNull().default(false),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    // At most one batch can be current — enforced by the database.
+    uniqueIndex("batches_one_current_idx")
+      .on(table.isCurrent)
+      .where(sql`${table.isCurrent} = true`),
+  ]
+);
 
 export const students = pgTable(
   "students",
@@ -69,19 +81,26 @@ export const attendanceRecords = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (table) => [unique().on(table.studentId, table.date)]
+  (table) => [
+    unique().on(table.studentId, table.date),
+    index("attendance_records_date_idx").on(table.date),
+  ]
 );
 
-export const leaves = pgTable("leaves", {
-  id: serial("id").primaryKey(),
-  studentId: integer("student_id")
-    .notNull()
-    .references(() => students.id),
-  startDate: date("start_date").notNull(),
-  endDate: date("end_date").notNull(),
-  reason: text("reason"),
-  createdBy: integer("created_by")
-    .notNull()
-    .references(() => users.id),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const leaves = pgTable(
+  "leaves",
+  {
+    id: serial("id").primaryKey(),
+    studentId: integer("student_id")
+      .notNull()
+      .references(() => students.id),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date").notNull(),
+    reason: text("reason"),
+    createdBy: integer("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("leaves_student_idx").on(table.studentId)]
+);
