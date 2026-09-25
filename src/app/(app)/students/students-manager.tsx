@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { UserPlus, Search, Pencil, Trash2, Users, Eye } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Users, Eye, CalendarDays } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { useStudentDrawer } from "@/components/student-drawer-context";
 import { useToast } from "@/components/toast-provider";
 import type { Student } from "@/lib/db/queries/students";
 import type { Batch } from "@/lib/db/queries/batches";
+import { formatDate } from "@/lib/date";
 
 interface Props {
   batchName: string;
@@ -41,6 +42,8 @@ export function StudentsManager({
   const [pending, setPending] = useState(false);
   const [query, setQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const filtered = students.filter((s) => {
     const q = query.trim().toLowerCase();
@@ -50,6 +53,13 @@ export function StudentsManager({
       s.rollNumber.toLowerCase().includes(q)
     );
   });
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const visibleStudents = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  function formatPostingPeriod(period: string) {
+    const parts = period.split(/\s+to\s+|\s+–\s+/);
+    return parts.length === 2 ? `${formatDate(parts[0])} – ${formatDate(parts[1])}` : period;
+  }
 
   function openAdd() {
     setEditingId(null);
@@ -179,36 +189,32 @@ export function StudentsManager({
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-neutral-200/80 pb-5 dark:border-neutral-800">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
             Registered Interns
           </h1>
-          <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
-            Active Batch: <strong className="font-semibold text-neutral-800 dark:text-neutral-200">{batchName}</strong>
+          <p className="mt-2 inline-flex items-center gap-2 rounded-lg border border-emerald-200/80 bg-emerald-50/70 px-2.5 py-1.5 text-[11px] font-medium text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" aria-hidden="true" />
+            Active batch <span className="font-semibold">{batchName}</span>
           </p>
         </div>
-        <button
-          onClick={openAdd}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-[#7d1527] focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-[#b82540]"
-        >
-          <UserPlus className="h-4 w-4" />
-          <span>Add Intern</span>
-        </button>
       </div>
 
       {/* Main Intern Table Card */}
       <section className="min-w-0">
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
+            <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
               <Users className="h-4 w-4 text-[#9E1B32] dark:text-[#e8a3b0]" />
               Intern Directory ({students.length})
             </h2>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-              Click any intern row to open complete attendance history modal
-            </p>
+            <button type="button" onClick={openAdd} aria-label="Add intern" title="Add intern" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#9E1B32] text-white transition-colors hover:bg-[#7d1527] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] sm:hidden dark:hover:bg-[#b82540]"><Plus className="h-5 w-5" /></button>
+            </div>
+            <p className="mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">Search interns here.</p>
           </div>
-          <div className="relative">
+          <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1 sm:flex-none">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
             <input
               type="search"
@@ -216,8 +222,10 @@ export function StudentsManager({
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search name or roll number..."
               aria-label="Search students by name or roll number"
-              className="w-full sm:w-64 rounded-lg border border-neutral-300/80 bg-white pl-9 pr-3.5 py-1.5 text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100"
+              className="w-full rounded-lg border border-neutral-300/80 bg-white py-2 pl-9 pr-3.5 text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 sm:w-64 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100"
             />
+          </div>
+          <button type="button" onClick={openAdd} aria-label="Add intern" title="Add intern" className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#9E1B32] text-white transition-colors hover:bg-[#7d1527] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] sm:inline-flex dark:hover:bg-[#b82540]"><Plus className="h-5 w-5" /></button>
           </div>
         </div>
 
@@ -233,7 +241,7 @@ export function StudentsManager({
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
-              {filtered.map((s) => (
+              {visibleStudents.map((s) => (
                 <tr
                   key={s.id}
                   onClick={() => openStudent(s.id)}
@@ -305,21 +313,17 @@ export function StudentsManager({
 
         {/* Mobile intern records */}
         <ul className="grid gap-3 md:hidden">
-          {filtered.map((student) => (
-            <li key={student.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-900">
-              <button type="button" onClick={() => openStudent(student.id)} className="flex w-full min-w-0 items-start gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32]">
-                <span className="mt-0.5 shrink-0 rounded-md bg-[#9E1B32]/8 px-2 py-1 font-mono text-xs font-bold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">#{student.rollNumber}</span>
+          {visibleStudents.map((student) => (
+            <li key={student.id} className="rounded-xl border border-neutral-200/90 bg-white p-3 shadow-sm shadow-neutral-900/[0.025] transition-colors hover:border-neutral-300 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700">
+              <button type="button" aria-label={`View ${student.name} profile`} onClick={() => openStudent(student.id)} className="flex w-full min-w-0 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32]">
+                <span className="flex h-9 min-w-10 shrink-0 items-center justify-center rounded-lg bg-[#9E1B32]/[0.07] px-2 font-mono text-[11px] font-bold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">#{student.rollNumber}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{student.name}</span>
-                  <span className="mt-1 block text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Open intern profile</span>
+                  <span className="mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-md bg-neutral-50 px-2 py-1 text-[10px] font-medium tabular-nums text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"><CalendarDays className="h-3 w-3 shrink-0 text-[#9E1B32] dark:text-[#e8a3b0]" />{formatPostingPeriod(student.postingPeriod)}</span>
               </span>
               <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300"><Eye className="h-4 w-4" /></span>
               </button>
-              <div className="mt-3 flex items-center justify-between gap-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Posting period</p>
-                  <p className="mt-0.5 truncate text-xs text-neutral-700 dark:text-neutral-300">{student.postingPeriod}</p>
-                </div>
+              <div className="mt-3 flex items-center justify-end gap-3 border-t border-neutral-100 pt-2 dark:border-neutral-800">
                 <div className="flex shrink-0 items-center gap-1">
                   <button type="button" aria-label={`Edit ${student.name}`} title="Edit intern" onClick={() => openEdit(student)} className="flex h-9 w-9 items-center justify-center rounded-lg text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-blue-950/40">
                     <Pencil className="h-4 w-4" />
@@ -333,6 +337,7 @@ export function StudentsManager({
           ))}
           {filtered.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">{students.length === 0 ? "Add interns first to start managing this batch." : "No matching interns found."}</li>}
         </ul>
+        {pageCount > 1 && <nav aria-label="Intern directory pages" className="mt-4 flex items-center justify-between border-t border-neutral-200 pt-3 dark:border-neutral-800"><p className="text-[11px] text-neutral-500">Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}</p><div className="flex gap-2"><button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page === 1} className="h-8 rounded-md border border-neutral-200 px-3 text-xs font-medium disabled:opacity-40 dark:border-neutral-700">Previous</button><span className="inline-flex h-8 items-center px-2 text-xs tabular-nums text-neutral-500">{page} / {pageCount}</span><button type="button" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={page === pageCount} className="h-8 rounded-md border border-neutral-200 px-3 text-xs font-medium disabled:opacity-40 dark:border-neutral-700">Next</button></div></nav>}
       </section>
 
       {/* Add / Edit Student Modal */}

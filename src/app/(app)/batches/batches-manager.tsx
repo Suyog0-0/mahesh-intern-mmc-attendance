@@ -12,6 +12,7 @@ import {
   Loader2,
   Pencil,
   Trash2,
+  Eye,
 } from "lucide-react";
 
 type BatchRow = Batch & { studentCount: number };
@@ -29,6 +30,7 @@ export function BatchesManager({
   const [pending, setPending] = useState(false);
   const [switching, setSwitching] = useState<number | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [viewTarget, setViewTarget] = useState<BatchRow | null>(null);
 
   // Edit state
   const [editTarget, setEditTarget] = useState<BatchRow | null>(null);
@@ -235,8 +237,9 @@ export function BatchesManager({
                   <td data-label="Interns" className="px-4 py-3.5 font-semibold text-neutral-800 dark:text-neutral-200">
                     {b.studentCount}
                   </td>
-                  <td data-label="Actions" className="px-4 py-3.5">
+                  <td data-label="Actions" className="px-4 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <button type="button" onClick={() => setViewTarget(b)} title="View batch" aria-label={`View ${b.name}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"><Eye className="h-4 w-4" /></button>
                       {!b.isCurrent && (
                         <button
                           onClick={() => makeCurrent(b.id)}
@@ -302,16 +305,26 @@ export function BatchesManager({
                 </div>
                 <span className="shrink-0 rounded-md bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">{batch.studentCount} interns</span>
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-                {!batch.isCurrent && <button type="button" onClick={() => makeCurrent(batch.id)} disabled={switching === batch.id} className="min-h-9 rounded-lg bg-[#9E1B32]/8 px-3 text-xs font-semibold text-[#9E1B32] hover:bg-[#9E1B32]/15 disabled:opacity-50 dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">{switching === batch.id ? "Updating…" : "Make current"}</button>}
+              <div className="mt-3 flex items-center justify-end gap-1.5 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <button type="button" aria-label={`View ${batch.name}`} title="View batch" onClick={() => setViewTarget(batch)} className="mr-auto flex h-9 w-9 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"><Eye className="h-4 w-4" /></button>
                 <button type="button" aria-label={`Edit ${batch.name}`} title="Edit batch" onClick={() => openEdit(batch)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-100 text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-blue-900/50 dark:text-blue-300 dark:hover:bg-blue-950/40"><Pencil className="h-4 w-4" /></button>
                 {!batch.isCurrent && <button type="button" aria-label={`Delete ${batch.name}`} title="Delete batch" onClick={() => openDelete(batch)} className="flex h-9 w-9 items-center justify-center rounded-lg text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:text-red-300 dark:hover:bg-red-950/40"><Trash2 className="h-4 w-4" /></button>}
+                {!batch.isCurrent && <button type="button" onClick={() => makeCurrent(batch.id)} disabled={switching === batch.id} className="ml-1 min-h-9 rounded-lg bg-[#9E1B32]/[0.07] px-3 text-xs font-semibold text-[#9E1B32] hover:bg-[#9E1B32]/15 disabled:opacity-50 dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">{switching === batch.id ? "Updating…" : "Make current"}</button>}
               </div>
             </li>
           ))}
           {batches.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">No batches yet. Create a batch to start organizing interns.</li>}
         </ul>
       </section>
+
+      <Modal open={!!viewTarget} onOpenChange={(open) => !open && setViewTarget(null)} title={viewTarget?.name ?? "Batch details"} description="Batch overview">
+        {viewTarget && <div className="grid grid-cols-2 gap-3 pt-1">
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-800/40"><p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Status</p><p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{viewTarget.isCurrent ? "Current batch" : "Archived batch"}</p></div>
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-800/40"><p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Interns</p><p className="mt-1 text-sm font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{viewTarget.studentCount}</p></div>
+          <div className="col-span-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-800/40"><p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">Batch dates</p><p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-neutral-100">{formatDate(viewTarget.startDate)} – {formatDate(viewTarget.endDate)}</p></div>
+        </div>}
+        <Modal.Footer><button type="button" onClick={() => setViewTarget(null)} className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 dark:border-neutral-700 dark:text-neutral-300">Close</button></Modal.Footer>
+      </Modal>
 
       {/* Create Batch Modal */}
       <Modal

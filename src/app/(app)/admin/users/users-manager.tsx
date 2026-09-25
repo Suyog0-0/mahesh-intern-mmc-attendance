@@ -42,6 +42,7 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
   // Reset password state
   const [resetTarget, setResetTarget] = useState<PublicUser | null>(null);
   const [resetPassword, setResetPassword] = useState("");
+  const [confirmResetPassword, setConfirmResetPassword] = useState("");
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetPending, setResetPending] = useState(false);
 
@@ -66,6 +67,7 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
   function closeReset() {
     setResetTarget(null);
     setResetPassword("");
+    setConfirmResetPassword("");
     setResetError(null);
   }
 
@@ -121,6 +123,10 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
     if (!resetTarget || resetPending) return;
     if (resetPassword.length < 8) {
       setResetError("Password must be at least 8 characters.");
+      return;
+    }
+    if (resetPassword !== confirmResetPassword) {
+      setResetError("Passwords do not match.");
       return;
     }
     setResetPending(true);
@@ -221,9 +227,11 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
 
       <section className="min-w-0">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
-            Authorized Accounts ({users.length})
-          </h2>
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">Authorized accounts</h2>
+            <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">Manage sign-in access and account roles.</p>
+          </div>
+          <span className="shrink-0 rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">{users.length} total</span>
         </div>
 
         {/* Desktop table */}
@@ -316,19 +324,25 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
         {/* Mobile account records */}
         <ul className="grid gap-3 md:hidden">
           {users.map((user) => (
-            <li key={user.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-900">
+            <li key={user.id} className="rounded-xl border border-neutral-200/90 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
               <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#9E1B32]/8 text-xs font-bold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">{initials(user.name)}</span>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#9E1B32]/10 bg-[#9E1B32]/[0.06] text-xs font-bold tracking-wide text-[#9E1B32] dark:border-[#e8a3b0]/15 dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">{initials(user.name)}</span>
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{user.name}</h3>
                   <p className="mt-0.5 truncate font-mono text-xs text-neutral-500 dark:text-neutral-400">@{user.username}</p>
                 </div>
-                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold capitalize ${user.role === "admin" ? "bg-[#9E1B32]/10 text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]" : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"}`}>{user.role}</span>
+                <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-semibold capitalize ${user.role === "admin" ? "border-[#9E1B32]/15 bg-[#9E1B32]/[0.06] text-[#86172b] dark:border-[#e8a3b0]/15 dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]" : "border-neutral-200 bg-neutral-50 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"}`}>
+                  {user.role === "admin" ? <ShieldCheck className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
+                  {user.role}
+                </span>
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-                <button type="button" aria-label={`Edit ${user.name}`} title="Edit account" onClick={() => openEdit(user)} className="flex min-h-10 items-center justify-center rounded-lg border border-blue-100 text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-blue-900/50 dark:text-blue-300 dark:hover:bg-blue-950/40"><Pencil className="h-4 w-4" /></button>
-                <button type="button" aria-label={`Reset password for ${user.name}`} title="Reset password" onClick={() => setResetTarget(user)} className="flex min-h-10 items-center justify-center rounded-lg border border-sky-100 text-sky-700 transition-colors hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 dark:border-sky-900/50 dark:text-sky-300 dark:hover:bg-sky-950/40"><KeyRound className="h-4 w-4" /></button>
-                <button type="button" aria-label={`Delete ${user.name}`} title="Delete account" onClick={() => openDelete(user)} className="flex min-h-10 items-center justify-center rounded-lg text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:text-red-300 dark:hover:bg-red-950/40"><Trash2 className="h-4 w-4" /></button>
+              <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-2.5 dark:border-neutral-800">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-400">Account actions</span>
+                <div className="flex items-center gap-1">
+                  <button type="button" aria-label={`Edit ${user.name}`} title="Edit account" onClick={() => openEdit(user)} className="flex h-9 w-9 items-center justify-center rounded-lg text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-blue-950/40"><Pencil className="h-4 w-4" /></button>
+                  <button type="button" aria-label={`Reset password for ${user.name}`} title="Reset password" onClick={() => setResetTarget(user)} className="flex h-9 w-9 items-center justify-center rounded-lg text-sky-700 transition-colors hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 dark:text-sky-300 dark:hover:bg-sky-950/40"><KeyRound className="h-4 w-4" /></button>
+                  <button type="button" aria-label={`Delete ${user.name}`} title="Delete account" onClick={() => openDelete(user)} className="flex h-9 w-9 items-center justify-center rounded-lg text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:text-red-300 dark:hover:bg-red-950/40"><Trash2 className="h-4 w-4" /></button>
+                </div>
               </div>
             </li>
           ))}
@@ -538,6 +552,18 @@ export function UsersManager({ initialUsers }: { initialUsers: PublicUser[] }) {
               onChange={(e) => setResetPassword(e.target.value)}
               className={inputCls}
               placeholder="Enter new password"
+            />
+          </label>
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+            Re-enter New Password
+            <input
+              required
+              type="password"
+              minLength={8}
+              value={confirmResetPassword}
+              onChange={(e) => setConfirmResetPassword(e.target.value)}
+              className={inputCls}
+              placeholder="Confirm new password"
             />
           </label>
           <Modal.Footer>
