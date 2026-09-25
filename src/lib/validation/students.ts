@@ -11,6 +11,7 @@ export const createStudentSchema = z.object({
 
 export const updateStudentSchema = z
   .object({
+    batchId: idSchema.optional(),
     rollNumber: rollNumberSchema.optional(),
     name: z.string().trim().min(1).max(128).optional(),
     postingPeriod: z.string().trim().min(1).max(128).optional(),

@@ -77,6 +77,7 @@ export async function addStudent(input: {
 export async function editStudent(
   id: number,
   patch: {
+    batchId?: number;
     rollNumber?: string;
     name?: string;
     postingPeriod?: string;

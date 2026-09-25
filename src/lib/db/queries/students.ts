@@ -59,6 +59,7 @@ export async function createStudent(input: {
 export async function updateStudent(
   id: number,
   patch: {
+    batchId?: number;
     rollNumber?: string;
     name?: string;
     postingPeriod?: string;
