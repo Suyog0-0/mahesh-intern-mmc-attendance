@@ -41,3 +41,17 @@ Light + dark mode both required. Avoid decorative bloat, gradients, glassmorphis
 
 ## Deployment target
 intern.mmc.vercel.app, private GitHub repo mahesh-intern-mmc-attendance.
+
+## Product surface status (updated session 6)
+Dashboard, Take Attendance, Students, Batches, Leaves, Calendar and Reports
+(with CSV export) are all built — see .claude/docs/architecture.md for what
+each does and where the code lives. This file describes product intent and
+scope only; check architecture.md for current implementation status rather
+than assuming from this file alone.
+
+## Landing page decision (session 6)
+Both admin and staff land on the same dashboard (`/`) after login. Admin is
+not routed to a separate `/admin` dashboard — admin can also take attendance
+like staff, so the dashboard links to Take Attendance the same way for both
+roles. Admin-only management (Students, Batches, Staff Accounts) is reached
+via nav links only admin sees, not via a different landing page.

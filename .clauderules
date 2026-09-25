@@ -3,12 +3,12 @@
 ```text
 mahesh-intern-mmc-attendance/
 ├── .claude/
+│   ├── docs/
+│   │   ├── architecture.md
+│   │   ├── context.md
+│   │   └── gotchas.md
 │   └── memory/
-│       ├── MEMORY.md
-│       ├── architecture.md
-│       ├── context.md
-│       ├── gotchas.md
-│       └── YYYY-MM-DD-HHMMSS.md
+│       └── memory-YYYYMMDD-HHMMSS.md   (one per session, never overwritten)
 ├── drizzle/
 │   ├── schema.ts
 │   └── migrations/
@@ -16,23 +16,42 @@ mahesh-intern-mmc-attendance/
 │   └── seed-admin.ts
 ├── src/
 │   ├── app/
+│   │   ├── (app)/            route group for authenticated pages (shared nav shell)
+│   │   │   ├── page.tsx              dashboard
+│   │   │   ├── attendance/
+│   │   │   ├── students/             admin-only
+│   │   │   ├── batches/              admin-only
+│   │   │   ├── leaves/
+│   │   │   ├── calendar/
+│   │   │   ├── reports/
+│   │   │   ├── admin/users/          admin-only
+│   │   │   └── layout.tsx            requirePageSession() + NavShell
 │   │   ├── api/
-│   │   │   └── auth/
-│   │   │       ├── login/
-│   │   │       ├── logout/
-│   │   │       └── me/
+│   │   │   ├── auth/{login,logout,me}/
+│   │   │   ├── admin/users/[id]/password/, admin/users/
+│   │   │   ├── students/, students/[id]/
+│   │   │   ├── batches/, batches/[id]/
+│   │   │   ├── leaves/, leaves/[id]/
+│   │   │   ├── attendance/, attendance/lookup/
+│   │   │   ├── calendar/, dashboard/
+│   │   │   └── reports/summary/, reports/export/
 │   │   ├── login/
 │   │   │   └── page.tsx
-│   │   ├── layout.tsx
-│   │   └── page.tsx
+│   │   └── layout.tsx
+│   ├── components/            shared UI: NavShell, Card, StatusBadge, format helpers
 │   ├── lib/
 │   │   ├── auth/
-│   │   │   ├── password.ts
-│   │   │   ├── jwt.ts
-│   │   │   └── session.ts
-│   │   └── db/
-│   │       └── index.ts
-│   └── middleware.ts
+│   │   │   ├── password.ts, jwt.ts, session.ts, page-guards.ts
+│   │   ├── db/
+│   │   │   ├── index.ts
+│   │   │   └── queries/       one file per table (users, batches, students, attendance, leaves)
+│   │   ├── attendance/        summary.ts (pure math), service.ts, csv.ts
+│   │   ├── roster/            service.ts (batches/students/leaves mutations)
+│   │   ├── validation/        one Zod file per resource
+│   │   ├── api.ts             authorize/parseBody/parseQuery/handleError/respond
+│   │   ├── result.ts          Result<T> type shared by service functions
+│   │   └── date.ts            all date math (Asia/Kathmandu "today", ranges, formatting)
+│   └── proxy.ts               Next 16 proxy (formerly middleware.ts)
 ├── drizzle.config.ts
 ├── .env.example
 ├── .clauderules
@@ -165,9 +184,11 @@ Passwords must be hashed using bcryptjs.
 
 Use the existing password helper instead of implementing password hashing directly inside route handlers.
 
-Middleware
+Proxy (formerly Middleware)
 
-src/middleware.ts is responsible for:
+Next.js 16 renamed the `middleware.ts` convention to `proxy.ts` (same
+behavior, exported function renamed `proxy`). This project uses
+src/proxy.ts, which is responsible for:
 
 * Protecting authenticated routes
 * Redirecting unauthenticated page requests to /login
@@ -175,7 +196,7 @@ src/middleware.ts is responsible for:
 * Restricting admin-only routes
 * Allowing public authentication endpoints
 
-Do not rely exclusively on middleware for authorization.
+Do not rely exclusively on the proxy for authorization.
 
 Every sensitive API mutation must perform its own server-side session/role check.
 
@@ -449,16 +470,17 @@ At the end of every work session:
 
 1. Get the real timestamp using:
 
-date +"%Y-%m-%d-%H%M%S"
+date +"%Y%m%d-%H%M%S"
 
 2. Create:
 
-.claude/memory/memory-YYYY-MM-DD-HHMMSS.md
+.claude/memory/memory-YYYYMMDD-HHMMSS.md
 
-3. Never overwrite an existing session log.
-4. Never overwrite MEMORY.md.
-5. Update architecture.md in place when the current implementation changes.
-6. Record:
+3. Never overwrite an existing session log — each session gets its own file.
+4. Update .claude/docs/architecture.md in place when the current
+   implementation changes (it is the living summary; session logs are the
+   append-only history).
+5. Record:
 
 * What was changed
 * What was tested
@@ -491,13 +513,17 @@ Documentation
 
 Important project documentation:
 
-.claude/docs/architecture.md
-.claude/docs/context.md
-.claude/docs/gotchas.md
-.claude/memory/MEMORY.md
-.claude/memory/memory-YYYY-MM-DD-HHMMSS.md
+.claude/docs/architecture.md   (living summary — kept in sync with the code)
+.claude/docs/context.md        (product/scope context — rarely changes)
+.claude/docs/gotchas.md        (environment quirks and their fixes)
+.claude/memory/memory-YYYYMMDD-HHMMSS.md   (one append-only log per session)
 
-These files are the project’s persistent development context.
+These files are the project’s persistent development context. There is no
+MEMORY.md and no `.claude/memory/architecture.md` — architecture.md,
+context.md and gotchas.md live under .claude/docs/. Always read
+.claude/docs/architecture.md AND the most recent memory-*.md session log
+before making changes; the session log records recent decisions the
+architecture summary may not have caught up to yet.
 
 Always read the relevant documentation before making changes.
 

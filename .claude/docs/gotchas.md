@@ -49,3 +49,44 @@ middleware's `?next=` redirect param on /login) must be wrapped in
 <Suspense> by its parent page, or prerendering/build fails. Pattern used in
 src/app/login/page.tsx: server page renders <Suspense fallback={null}>
 around the client form component.
+
+## Zod v4 API differences (session 6)
+This project pins zod ^4.6.5. Some v3-era APIs moved:
+- `error.flatten()` → `z.flattenError(error)` (top-level function, not a
+  method on the error instance). Used in `src/lib/api.ts`'s `validate()`.
+- `z.string().email()` etc. chained validators still work, but prefer
+  checking `node_modules/zod/package.json` version before assuming any
+  particular v3 pattern from training data still applies.
+
+## `next dev`/`next build` writes to AGENTS.md — don't fight it
+AGENTS.md contains a `<!-- BEGIN:nextjs-agent-rules -->...<!-- END -->` block
+that Next.js itself regenerates on `next dev`/`next build`
+(`node_modules/next/dist/server/lib/generate-agent-files.js`). If it's
+missing from a diff, that's normal — removing it just means it gets
+silently re-added the next time the dev/build server runs. Committing it
+is fine and keeps the working tree clean; don't hand-edit inside that block.
+
+## Font fetch (next/font/google) needs real internet access
+`next build`/`next dev` fetch Geist/Geist Mono from fonts.googleapis.com at
+build time. In network-restricted environments (sandboxes, CI without
+egress to Google) this fails with `next/font: error: Failed to fetch`. This
+is an environment/network issue, not a code bug — it will build fine on a
+normal machine or on Vercel. `npx tsc --noEmit` and `npx eslint` are
+reliable checks to run instead when full builds aren't possible locally.
+
+## Next.js 16 renamed middleware.ts → proxy.ts (session 6)
+The file convention `src/middleware.ts` (exported `middleware()` function)
+is deprecated in Next 16 in favor of `src/proxy.ts` (exported `proxy()`
+function) — same behavior, same `config.matcher`. `next build` prints a
+deprecation warning (not an error) if you still use `middleware.ts`. This
+project now uses `src/proxy.ts`. If you see the deprecation warning again,
+check that nobody re-added a `middleware.ts` alongside it.
+
+## `db.batch([...])` for atomic multi-statement writes on neon-http
+The `drizzle-orm/neon-http` adapter has no interactive transactions
+(`db.transaction()` is not available the way it is with node-postgres).
+For the two places that need atomicity — switching which batch is
+"current" (`setCurrentBatch`), and cascading a student delete across
+attendance_records + leaves + students (`deleteStudentWithRecords`) — use
+`db.batch([stmt1, stmt2, ...])` instead, which sends multiple statements as
+one atomic request. Don't reach for `db.transaction()` on this adapter.
