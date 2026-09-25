@@ -6,30 +6,40 @@ import { Card } from "@/components/card";
 import { Modal } from "@/components/modal";
 import { useStudentDrawer } from "@/components/student-drawer-context";
 import type { Student } from "@/lib/db/queries/students";
+import type { Batch } from "@/lib/db/queries/batches";
 
 interface Props {
   batchName: string;
+  currentBatchId: number;
+  batches: Batch[];
   initialStudents: Student[];
 }
 
-const emptyForm = {
-  rollNumber: "",
-  name: "",
-  postingStartDate: "",
-  postingEndDate: "",
-  remarks: "",
-};
-
-export function StudentsManager({ batchName, initialStudents }: Props) {
+export function StudentsManager({
+  batchName,
+  currentBatchId,
+  batches,
+  initialStudents,
+}: Props) {
   const { openStudent } = useStudentDrawer();
   const [students, setStudents] = useState(initialStudents);
-  const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+
+  const emptyForm = {
+    batchId: currentBatchId,
+    rollNumber: "",
+    name: "",
+    postingStartDate: "",
+    postingEndDate: "",
+    remarks: "",
+  };
+
+  const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [query, setQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
 
   const filtered = students.filter((s) => {
     const q = query.trim().toLowerCase();
@@ -42,7 +52,7 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
 
   function openAdd() {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, batchId: currentBatchId });
     setError(null);
     setFormOpen(true);
   }
@@ -50,7 +60,6 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
   function openEdit(s: Student) {
     setEditingId(s.id);
 
-    // Extract start/end dates if stored in "YYYY-MM-DD to YYYY-MM-DD" format
     let startDate = "";
     let endDate = "";
     if (s.postingPeriod.includes(" to ")) {
@@ -64,6 +73,7 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
     }
 
     setForm({
+      batchId: s.batchId,
       rollNumber: s.rollNumber,
       name: s.name,
       postingStartDate: startDate,
@@ -102,10 +112,11 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
 
     try {
       const payload = {
-        rollNumber: form.rollNumber,
-        name: form.name,
+        batchId: Number(form.batchId),
+        rollNumber: form.rollNumber.trim(),
+        name: form.name.trim(),
         postingPeriod,
-        remarks: form.remarks || null,
+        remarks: form.remarks ? form.remarks.trim() : null,
       };
 
       const res = await fetch(
@@ -146,7 +157,7 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Editorial Header */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-neutral-200/80 pb-5 dark:border-neutral-800">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
@@ -322,7 +333,7 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
         open={formOpen}
         onOpenChange={(open) => (open ? setFormOpen(true) : closeForm())}
         title={editingId ? "Edit Intern Record" : "Add New Intern"}
-        description="Fill out the intern details below with explicit posting period dates."
+        description="Fill out the intern details below with explicit batch and posting period dates."
       >
         {error && (
           <div
@@ -333,12 +344,31 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
           </div>
         )}
         <form onSubmit={submit} className="grid gap-3.5 py-1">
+          {/* Batch Selector Dropdown */}
+          <Field label="Assign Batch">
+            <div className="relative mt-1.5">
+              <select
+                value={form.batchId}
+                onChange={(e) =>
+                  setForm({ ...form, batchId: Number(e.target.value) })
+                }
+                className={inputCls}
+              >
+                {batches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} {b.isCurrent ? "(Current Active)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </Field>
+
           <Field label="Roll Number">
             <input
               required
               value={form.rollNumber}
               onChange={(e) => setForm({ ...form, rollNumber: e.target.value })}
-              placeholder="e.g. 101"
+              placeholder="e.g. 1"
               className={inputCls}
             />
           </Field>
@@ -382,7 +412,7 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
             <input
               value={form.remarks}
               onChange={(e) => setForm({ ...form, remarks: e.target.value })}
-              placeholder="e.g. General Surgery rotation"
+              placeholder="e.g. Surgery rotation"
               className={inputCls}
             />
           </Field>

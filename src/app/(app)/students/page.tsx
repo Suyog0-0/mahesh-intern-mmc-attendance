@@ -1,18 +1,20 @@
 import { requireAdminPage } from "@/lib/auth/page-guards";
-import { getCurrentBatch } from "@/lib/db/queries/batches";
+import { getCurrentBatch, listBatches } from "@/lib/db/queries/batches";
 import { listStudents } from "@/lib/db/queries/students";
 import { Card } from "@/components/card";
 import { StudentsManager } from "./students-manager";
 
 export default async function StudentsPage() {
   await requireAdminPage();
-  const batch = await getCurrentBatch();
-  const students = batch ? await listStudents(batch.id) : [];
+  const [currentBatch, allBatches] = await Promise.all([
+    getCurrentBatch(),
+    listBatches(),
+  ]);
 
-  if (!batch) {
+  if (!currentBatch && allBatches.length === 0) {
     return (
       <Card className="mx-auto mt-12 max-w-md text-center">
-        <p className="font-medium">No current batch is set.</p>
+        <p className="font-medium">No batch exists yet.</p>
         <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
           Create a batch on the Batches page first, then add students here.
         </p>
@@ -20,5 +22,15 @@ export default async function StudentsPage() {
     );
   }
 
-  return <StudentsManager batchName={batch.name} initialStudents={students} />;
+  const activeBatch = currentBatch ?? allBatches[0];
+  const students = await listStudents(activeBatch.id);
+
+  return (
+    <StudentsManager
+      batchName={activeBatch.name}
+      currentBatchId={activeBatch.id}
+      batches={allBatches}
+      initialStudents={students}
+    />
+  );
 }
