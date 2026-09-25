@@ -3,6 +3,10 @@
 ## Stack (confirmed working as of 2026-09-25)
 - Next.js 16.3.6 (App Router, src/ dir, Turbopack), TypeScript strict
 - Tailwind CSS v4 (dark mode via prefers-color-scheme in globals.css)
+- Brand palette: institutional blue (`#1E4F91`) is the primary interaction
+  color; MMC red (`#B4233A`) is used as a restrained brand accent, with red
+  status/error semantics and existing amber/green/blue status colors retained.
+  Light surfaces use a cool blue-gray canvas; dark surfaces remain neutral navy.
 - Drizzle ORM + Neon Postgres (serverless driver, @neondatabase/serverless,
   drizzle-orm/neon-http adapter). `db.batch([...])` is used for the few
   multi-statement writes that must be atomic (neon-http has no interactive
@@ -12,7 +16,8 @@
 - Validation: Zod v4 — every route handler validates with `parseBody`/
   `parseQuery`/`parseParams` from `src/lib/api.ts`; note `z.flattenError`
   (Zod v4 API, not `.flatten()`).
-- No calendar library — custom-built, per brief's "avoid bloat" direction
+- Nepali calendar conversion via `nepali-date-converter`; dates remain ISO in
+  PostgreSQL/API payloads and display in Bikram Sambat throughout the UI.
 - dotenv (dev dependency, used only in drizzle.config.ts and
   scripts/seed-admin.ts to load .env.local)
 - tsx (dev dependency, added session 6, runs scripts/seed-admin.ts)
@@ -26,13 +31,15 @@
   protection runs in Next.js's proxy (formerly "middleware").
 
 ## Database schema — LIVE, migrated, source of truth is drizzle/schema.ts
-Migrations applied: 0000_ambiguous_slyde.sql (2026-09-24, initial 5 tables),
-0001_flimsy_blackheart.sql (2026-09-25, indexes below).
+Migrations 0000–0004 are applied to the Neon database configured in the local
+`.env.local` as of 2026-09-25. This does not verify that Vercel Production uses
+the same database; migrate each distinct environment before deploying.
 
 - users (id serial pk, username varchar(64) unique, password_hash text,
-  role enum[admin|staff] default staff, name varchar(128), created_at)
-  -- NOT YET SEEDED. Run `npm run seed:admin` once JWT_SECRET/DATABASE_URL
-  -- are set locally.
+  role enum[superadmin|admin|staff] default staff, name varchar(128), created_at)
+  -- Bootstrap the first operator with `npm run seed:admin`; append
+  -- `--role=superadmin` to create the first super-admin. The script is not a
+  -- fixed demo-account seed.
 - batches (id serial pk, name varchar(128), start_date date, end_date date,
   is_current boolean default false, created_at)
   -- unique partial index batches_one_current_idx enforces at most one
@@ -42,12 +49,15 @@ Migrations applied: 0000_ambiguous_slyde.sql (2026-09-24, initial 5 tables),
   name varchar(128), posting_period varchar(128), remarks text,
   created_at, updated_at) — UNIQUE(batch_id, roll_number)
 - attendance_records (id serial pk, student_id fk->students, date date,
-  status enum[absent|late|leave], remarks text, marked_by fk->users,
+  status enum[absent|late|leave|present], department enum nullable,
+  remarks text, marked_by nullable fk->users ON DELETE SET NULL,
   created_at, updated_at) — UNIQUE(student_id, date), plus
   attendance_records_date_idx on (date) for calendar/report range queries.
-  -- 'present' is implicit: absence of a record for a student+date = present.
+  -- Ordinary 'present' is implicit: no row = present. Explicit 'present'
+  -- rows are only for logging attendance at another department; department
+  -- is one of cardiology/dermatology/psychiatry/other.
 - leaves (id serial pk, student_id fk->students, start_date date,
-  end_date date, reason text, created_by fk->users, created_at), plus
+  end_date date, reason text, created_by nullable fk->users ON DELETE SET NULL, created_at), plus
   leaves_student_idx on (student_id).
 
 Verified with `npx drizzle-kit generate` (clean diff, no drift) as of
@@ -75,7 +85,7 @@ lateCount, leaveDays, absentDays, daily present/absent/late/leave counts).
     Take Attendance, not a separate /admin dashboard).
   - `attendance/` — the core roll-number-in, status-out workflow
     (`attendance-board.tsx`, client component) + date picker.
-  - `students/`, `batches/`, `admin/users/` — admin-only (each page calls
+  - `students/`, `batches/`, `admin/users/` — admin/superadmin-only (each page calls
     `requireAdminPage()`, and every mutating API route re-checks
     `authorize(["admin"])` server-side; the proxy's `/api/admin/*` guard
     covers `admin/users` only, not `/api/students` etc., so those routes'
@@ -102,10 +112,11 @@ lateCount, leaveDays, absentDays, daily present/absent/late/leave counts).
   else to a generic 500 — never leaks SQL).
 - `src/lib/result.ts` — `Result<T> = {ok:true,data} | {ok:false,status,error}`
   used by every function in `service.ts`/`roster/service.ts`.
-- `src/lib/date.ts` — ALL date math lives here: `todayISO()` computes "today"
-  in Asia/Kathmandu (not server UTC — Vercel runs UTC and would flip the day
-  ~5:45-6:45 early otherwise), `eachDate`, `monthBounds`, `shiftMonth`,
-  `formatDate`/`formatMonth` (en-GB style, e.g. "24 Sep 2026").
+- `src/lib/date.ts` — ALL date math lives here: ISO dates are stored and sent
+  through APIs; `todayISO()` computes today in Asia/Kathmandu; user-facing
+  dates use numeric Bikram Sambat (`DD/MM/YYYY`), and calendar month labels
+  use `MM/YYYY`. The date selector accepts BS day/month/year and converts to
+  ISO internally.
 - `src/components/` — `nav-shell.tsx` (client, role-aware nav + logout),
   `card.tsx` (`Card`, `StatTile`), `status-badge.tsx`, `format.ts`.
 - `src/app/api/auth/{login,logout,me}/route.ts` — BUILT, live API routes.
@@ -134,9 +145,10 @@ lateCount, leaveDays, absentDays, daily present/absent/late/leave counts).
   said it existed but it was never committed). Recreate it if needed:
   `DATABASE_URL=...` and `JWT_SECRET=...` placeholders.
 - scripts/seed-admin.ts — BUILT (session 6). Interactive or flag-based
-  (`npm run seed:admin -- --username=... --password=... --name=...`).
-  Re-running with an existing username resets that user's password and
-  sets role=admin (idempotent bootstrap, not a general user-creation tool —
+  (`npm run seed:admin -- --username=... --name=...`; password is prompted).
+  Optional `--role=superadmin` bootstraps the initial superadmin; rerunning
+  for an existing username preserves its role unless `--role` is explicit
+  (idempotent bootstrap, not a general user-creation tool —
   use the Staff Accounts admin page for that once one admin exists).
 
 ## Auth model — IMPLEMENTED (sessions 3, 5, 6)
@@ -162,10 +174,9 @@ All of the following exist as real pages + API routes, not stubs:
 - **Dashboard** (`/`) — today's present/absent/late/leave counts, batch
   totals to date, top-5 absentees. Both roles land here after login.
 - **Take Attendance** (`/attendance`) — roll number in, Absent/Late/Leave
-  button out; date picker (defaults today, capped at today — no future
-  dates); "mark present" (deletes the record) has a confirm step; shows
-  students already covered by an approved leave even if never explicitly
-  marked.
+  actions, plus a separate Present elsewhere department group; date picker
+  defaults today and disallows future dates; clearing a record marks present;
+  shows approved leave coverage even if never explicitly marked.
 - **Students** (`/students`, admin-only) — add/edit/delete for the current
   batch, search by name/roll. Delete cascades to that student's attendance
   records and leaves (`deleteStudentWithRecords`).
@@ -180,9 +191,10 @@ All of the following exist as real pages + API routes, not stubs:
 - **Reports** (`/reports`) — per-batch, per-date-range summary table (per
   student: absence/late/leave counts, total absent days) + CSV export
   (`/api/reports/export`, formula-injection-safe cells).
-- **Staff Accounts** (`/admin/users`, admin-only) — create staff/admin
-  accounts, reset a user's password. This is how additional staff/admin
-  logins get created after the initial `seed:admin` bootstrap.
+- **Staff Accounts** (`/admin/users`, admin/superadmin-only) — create staff/admin
+  accounts and reset passwords. A superadmin may create additional superadmins,
+  but all superadmin accounts are view-only and cannot be edited, reset, or
+  deleted by any account. Superadmins can change their own password in Settings.
 
 ## Environment variables
 - DATABASE_URL (server-only, Neon connection string) — set in .env.local
@@ -196,6 +208,12 @@ All of the following exist as real pages + API routes, not stubs:
   editable in Vercel UI).
 
 ## Discrepancies / open questions (updated session 6)
+- Cleanup of exact demo usernames `staff1`, `staff2`, `staff3`, and `admin`, plus
+  creation of `mahesh` (Dr.Mahesh Raj Sigdel) are complete in the Neon DB
+  configured by `.env.local`; removed actors retain history and display as
+  “Former account”. Vercel Production DB access is unavailable, so verify
+  whether it shares this database; if separate, migrate and repeat the exact
+  cleanup there.
 - RESOLVED: `.clauderules` folder tree, MEMORY.md reference, and
   middleware.ts naming were all stale from before the session-4 reorg /
   Next 16's middleware→proxy rename. Fixed in session 6.
