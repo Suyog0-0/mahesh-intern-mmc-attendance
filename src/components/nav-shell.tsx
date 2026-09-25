@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { StudentDrawerProvider } from "@/components/student-drawer-context";
+import { ToastProvider } from "@/components/toast-provider";
 
 interface NavShellProps {
   user: { name: string; username: string; role: "admin" | "staff" };
@@ -94,6 +95,7 @@ export function NavShell({ user, children }: NavShellProps) {
 
   return (
     <StudentDrawerProvider>
+      <ToastProvider>
       <div className="flex min-h-screen flex-col md:flex-row">
         {/* Desktop Sidebar */}
         <aside className="hidden w-64 shrink-0 flex-col border-r border-neutral-200/80 bg-white md:flex dark:border-neutral-800/80 dark:bg-neutral-900/60">
@@ -230,7 +232,7 @@ export function NavShell({ user, children }: NavShellProps) {
         </header>
 
         {/* Main Content */}
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-24 md:pb-8">
+        <main className="mx-auto min-w-0 w-full max-w-6xl flex-1 px-3 py-4 pb-24 sm:px-4 sm:py-6 md:pb-8">
           {children}
         </main>
 
@@ -293,6 +295,7 @@ export function NavShell({ user, children }: NavShellProps) {
           </div>
         </Modal>
       </div>
+      </ToastProvider>
     </StudentDrawerProvider>
   );
 }

@@ -38,7 +38,7 @@ export function Modal({
           <Dialog.Close asChild>
             <button
               aria-label="Close dialog"
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg bg-[#9E1B32]/10 text-[#9E1B32] transition-colors hover:bg-[#9E1B32] hover:text-white focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0] dark:hover:bg-[#9E1B32] dark:hover:text-white"
             >
               <X className="h-4 w-4" />
             </button>

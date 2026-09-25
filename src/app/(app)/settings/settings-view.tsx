@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/card";
 import { Modal } from "@/components/modal";
+import { useToast } from "@/components/toast-provider";
 import {
   User,
   Shield,
@@ -15,7 +16,6 @@ import {
   KeyRound,
   LogOut,
   ShieldCheck,
-  CheckCircle2,
   Loader2,
 } from "lucide-react";
 
@@ -39,6 +39,7 @@ function applyTheme(t: "light" | "dark" | "system") {
 
 export function SettingsView({ session, currentBatch }: Props) {
   const router = useRouter();
+  const { toast } = useToast();
   const [theme, setTheme] = useState<"light" | "dark" | "system">(() => {
     if (typeof window === "undefined") return "system";
     return (localStorage.getItem("theme") as "light" | "dark" | "system") || "system";
@@ -46,9 +47,7 @@ export function SettingsView({ session, currentBatch }: Props) {
   const [passModalOpen, setPassModalOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [passPending, setPassPending] = useState(false);
-  const [passSuccess, setPassSuccess] = useState<string | null>(null);
   const [passError, setPassError] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   useEffect(() => {
     applyTheme(theme);
@@ -71,7 +70,6 @@ export function SettingsView({ session, currentBatch }: Props) {
 
     setPassPending(true);
     setPassError(null);
-    setPassSuccess(null);
 
     try {
       const res = await fetch("/api/auth/me/password", {
@@ -83,9 +81,9 @@ export function SettingsView({ session, currentBatch }: Props) {
         setPassError("Failed to update password.");
         return;
       }
-      setPassSuccess("Your password was updated successfully.");
+      toast({ tone: "success", title: "Password updated", description: "Your new password is ready to use." });
       setNewPassword("");
-      setTimeout(() => setPassModalOpen(false), 1500);
+      setPassModalOpen(false);
     } catch {
       setPassError("Network error — try again.");
     } finally {
@@ -104,13 +102,6 @@ export function SettingsView({ session, currentBatch }: Props) {
           Manage system appearance, user credentials, and security settings
         </p>
       </div>
-
-      {actionMessage && (
-        <div className="rounded-xl bg-emerald-50 p-3.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4" />
-          {actionMessage}
-        </div>
-      )}
 
       {/* Grid Layout */}
       <div className="grid gap-5 md:grid-cols-2">
@@ -218,7 +209,6 @@ export function SettingsView({ session, currentBatch }: Props) {
               type="button"
               onClick={() => {
                 setPassError(null);
-                setPassSuccess(null);
                 setPassModalOpen(true);
               }}
               className="flex items-center justify-center gap-2 rounded-xl border border-neutral-300/80 bg-white p-3.5 text-xs font-bold text-neutral-800 shadow-2xs hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 transition-colors"
@@ -230,8 +220,7 @@ export function SettingsView({ session, currentBatch }: Props) {
             <button
               type="button"
               onClick={() => {
-                setActionMessage("Active session tokens verified.");
-                setTimeout(() => setActionMessage(null), 3000);
+                toast({ tone: "success", title: "Session check complete", description: "Your active session is valid." });
               }}
               className="flex items-center justify-center gap-2 rounded-xl border border-neutral-300/80 bg-white p-3.5 text-xs font-bold text-neutral-800 shadow-2xs hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 transition-colors"
             >
@@ -268,11 +257,6 @@ export function SettingsView({ session, currentBatch }: Props) {
             className="mb-3 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-950/40 dark:text-red-400"
           >
             {passError}
-          </div>
-        )}
-        {passSuccess && (
-          <div className="mb-3 rounded-lg bg-emerald-50 p-3 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-            {passSuccess}
           </div>
         )}
         <form onSubmit={handlePasswordSubmit} className="grid gap-3.5 pt-1">
