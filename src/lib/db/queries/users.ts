@@ -49,3 +49,23 @@ export async function updateUserPasswordHash(
     .returning({ id: users.id });
   return rows.length > 0;
 }
+
+export async function updateUser(
+  id: number,
+  input: Partial<{ name: string; username: string; role: "admin" | "staff" }>,
+): Promise<PublicUser | null> {
+  const [row] = await db
+    .update(users)
+    .set(input)
+    .where(eq(users.id, id))
+    .returning(publicColumns);
+  return row ?? null;
+}
+
+export async function deleteUser(id: number): Promise<boolean> {
+  const rows = await db
+    .delete(users)
+    .where(eq(users.id, id))
+    .returning({ id: users.id });
+  return rows.length > 0;
+}
