@@ -1,3 +1,5 @@
+// Next.js 16 renamed the "middleware" convention to "proxy"; this file is
+// the proxy.ts equivalent of the old middleware.ts (same behavior).
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth/jwt";
 
@@ -12,7 +14,7 @@ function isPublic(pathname: string) {
   );
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isPublic(pathname)) {
