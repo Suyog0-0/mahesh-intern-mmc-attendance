@@ -1,13 +1,6 @@
 /**
- * Seed dummy data across all tables so you can sanity-check the app.
- *
- * Usage:
- *   npm run seed --
- * (add a "seed": "tsx --env-file=.env.local scripts/seed.ts" script,
- *  or use the dotenv-based loader below — matches seed-admin.ts style)
- *
- * Safe to re-run: wipes previously-seeded rows (by known markers) before
- * inserting fresh ones, in FK-safe order (children first).
+ * Seed comprehensive dummy data across all tables so you can test the app.
+ * Usage: npx tsx --env-file=.env.local scripts/seed.ts
  */
 
 import dotenv from "dotenv";
@@ -28,9 +21,7 @@ async function main() {
 
   console.log("Seeding dummy data...\n");
 
-  // ---------------------------------------------------------------------
-  // 1. Admin user (idempotent upsert, same pattern as seed-admin.ts)
-  // ---------------------------------------------------------------------
+  // 1. Admin user
   const adminUsername = "admin";
   const [existingAdmin] = await db
     .select()
@@ -50,14 +41,14 @@ async function main() {
         username: adminUsername,
         passwordHash,
         role: "admin",
-        name: "Seed Admin",
+        name: "Admin User",
       })
       .returning();
     adminId = inserted.id;
     console.log(`Created admin user "${adminUsername}" / password123`);
   }
 
-  // A staff user too, since markedBy/createdBy can be any user.
+  // 2. Staff user
   const staffUsername = "staff1";
   const [existingStaff] = await db
     .select()
@@ -77,28 +68,23 @@ async function main() {
         username: staffUsername,
         passwordHash,
         role: "staff",
-        name: "Seed Staff",
+        name: "Staff Mahesh",
       })
       .returning();
     staffId = inserted.id;
     console.log(`Created staff user "${staffUsername}" / password123`);
   }
 
-  // ---------------------------------------------------------------------
-  // 2. Wipe previously seeded batch(es) + dependent rows, FK-safe order.
-  //    We tag seeded batches with a recognizable name prefix so re-runs
-  //    don't pile up duplicates or collide with real data.
-  // ---------------------------------------------------------------------
-  const seedBatchName = "Seed Batch 2026";
+  // 3. Clear existing seed batches
+  const seedBatchNames = ["Batch 2026-A", "Batch 2025-B"];
 
   const existingSeedBatches = await db
     .select({ id: batches.id })
     .from(batches)
-    .where(eq(batches.name, seedBatchName));
+    .where(inArray(batches.name, seedBatchNames));
 
   if (existingSeedBatches.length > 0) {
     const batchIds = existingSeedBatches.map((b) => b.id);
-
     const seedStudents = await db
       .select({ id: students.id })
       .from(students)
@@ -114,69 +100,67 @@ async function main() {
     }
 
     await db.delete(batches).where(inArray(batches.id, batchIds));
-    console.log("Cleared previously seeded batch/students/attendance/leaves.");
+    console.log("Cleared previously seeded batches/students/attendance/leaves.");
   }
 
-  // ---------------------------------------------------------------------
-  // 3. Batch — marked current. If another batch is already current,
-  //    unset it first (DB has a unique index enforcing only one).
-  // ---------------------------------------------------------------------
+  // 4. Create batches
   await db
     .update(batches)
     .set({ isCurrent: false })
     .where(eq(batches.isCurrent, true));
 
-  const today = new Date();
-  const startDate = new Date(today);
-  startDate.setMonth(startDate.getMonth() - 1);
-  const endDate = new Date(today);
-  endDate.setMonth(endDate.getMonth() + 5);
-
-  const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
-
-  const [batch] = await db
+  const [currentBatch] = await db
     .insert(batches)
     .values({
-      name: seedBatchName,
-      startDate: toDateStr(startDate),
-      endDate: toDateStr(endDate),
+      name: "Batch 2026-A",
+      startDate: "2026-01-01",
+      endDate: "2026-06-30",
       isCurrent: true,
     })
     .returning();
 
-  console.log(`Created batch "${batch.name}" (id=${batch.id})`);
+  await db.insert(batches).values({
+    name: "Batch 2025-B",
+    startDate: "2025-07-01",
+    endDate: "2025-12-31",
+    isCurrent: false,
+  });
 
-  // ---------------------------------------------------------------------
-  // 4. Students
-  // ---------------------------------------------------------------------
-  const studentNames = [
+  console.log(`Created current batch "${currentBatch.name}"`);
+
+  // 5. Create 12 students
+  const internNames = [
     "Ramesh Sharma",
     "Sita Gurung",
     "Bikash Thapa",
     "Anita Rai",
     "Prakash Karki",
+    "Sunita Shrestha",
+    "Deepak Adhikari",
+    "Manju Tamang",
+    "Kiran Khatri",
+    "Aasha Bista",
+    "Roshan Mahato",
+    "Pooja Chaudhary",
   ];
 
   const insertedStudents = await db
     .insert(students)
     .values(
-      studentNames.map((name, i) => ({
-        batchId: batch.id,
+      internNames.map((name, i) => ({
+        batchId: currentBatch.id,
         rollNumber: `${i + 1}`,
         name,
-        postingPeriod: "Jan 2026 - Jun 2026",
-        remarks: i === 0 ? "Sample remark for testing" : null,
+        postingPeriod: "2026-01-01 to 2026-06-30",
+        remarks: i % 2 === 0 ? "Surgery rotation" : "Internal Medicine",
       })),
     )
     .returning();
 
-  console.log(`Created ${insertedStudents.length} students.`);
+  console.log(`Created ${insertedStudents.length} interns.`);
 
-  // ---------------------------------------------------------------------
-  // 5. Attendance records — last 7 days, mix of statuses.
-  //    (No "present" status exists in the enum, so days with no record
-  //    are implicitly "present" per your schema design.)
-  // ---------------------------------------------------------------------
+  // 6. Create attendance records for last 7 days
+  const today = new Date();
   const statuses = ["absent", "late", "leave"] as const;
   const attendanceRows: {
     studentId: number;
@@ -186,10 +170,11 @@ async function main() {
     markedBy: number;
   }[] = [];
 
+  const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
+
   for (const student of insertedStudents) {
     for (let dayOffset = 1; dayOffset <= 7; dayOffset++) {
-      // Only mark ~40% of days so most days are implicitly "present".
-      if (Math.random() > 0.4) continue;
+      if (Math.random() > 0.35) continue;
 
       const date = new Date(today);
       date.setDate(date.getDate() - dayOffset);
@@ -199,7 +184,7 @@ async function main() {
         studentId: student.id,
         date: toDateStr(date),
         status,
-        remarks: status === "late" ? "Arrived 30 min late" : null,
+        remarks: status === "late" ? "Arrived 20 mins late" : null,
         markedBy: staffId,
       });
     }
@@ -210,29 +195,24 @@ async function main() {
   }
   console.log(`Created ${attendanceRows.length} attendance records.`);
 
-  // ---------------------------------------------------------------------
-  // 6. Leaves — give 2 students an upcoming leave entry.
-  // ---------------------------------------------------------------------
+  // 7. Create 3 approved leave entries
   const leaveStart = new Date(today);
-  leaveStart.setDate(leaveStart.getDate() + 3);
+  leaveStart.setDate(leaveStart.getDate() + 2);
   const leaveEnd = new Date(leaveStart);
-  leaveEnd.setDate(leaveEnd.getDate() + 2);
+  leaveEnd.setDate(leaveEnd.getDate() + 3);
 
-  const leaveRows = insertedStudents.slice(0, 2).map((student, i) => ({
+  const leaveRows = insertedStudents.slice(0, 3).map((student, i) => ({
     studentId: student.id,
     startDate: toDateStr(leaveStart),
     endDate: toDateStr(leaveEnd),
-    reason: i === 0 ? "Family event" : "Medical",
+    reason: i === 0 ? "Medical leave" : i === 1 ? "Family event" : "Academic seminar",
     createdBy: adminId,
   }));
 
   await db.insert(leaves).values(leaveRows);
   console.log(`Created ${leaveRows.length} leave entries.`);
 
-  console.log("\nSeed complete.");
-  console.log(`Login as admin: ${adminUsername} / password123`);
-  console.log(`Login as staff: ${staffUsername} / password123`);
-
+  console.log("\nSeed complete successfully!");
   process.exit(0);
 }
 
