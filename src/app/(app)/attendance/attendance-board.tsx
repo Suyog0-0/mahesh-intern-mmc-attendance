@@ -71,6 +71,13 @@ export function AttendanceBoard({
   const [error, setError] = useState<string | null>(null);
 
   const [records, setRecords] = useState(initialRecords);
+  const [prevInitialRecords, setPrevInitialRecords] = useState(initialRecords);
+
+  if (initialRecords !== prevInitialRecords) {
+    setPrevInitialRecords(initialRecords);
+    setRecords(initialRecords);
+  }
+
   const [clearTarget, setClearTarget] = useState<DayListRow | null>(null);
   const [isClearing, setIsClearing] = useState(false);
 
@@ -82,12 +89,23 @@ export function AttendanceBoard({
   const searchSuggestions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return [];
-    return allStudents
-      .filter(
-        (s) =>
-          s.rollNumber.toLowerCase().includes(q) ||
-          s.name.toLowerCase().includes(q),
-      )
+
+    const filtered = allStudents.filter((s) => {
+      const r = s.rollNumber.toLowerCase();
+      const n = s.name.toLowerCase();
+      return r === q || r.startsWith(q) || n.includes(q);
+    });
+
+    return filtered
+      .sort((a, b) => {
+        const aR = a.rollNumber.toLowerCase();
+        const bR = b.rollNumber.toLowerCase();
+        if (aR === q && bR !== q) return -1;
+        if (bR === q && aR !== q) return 1;
+        if (aR.startsWith(q) && !bR.startsWith(q)) return -1;
+        if (bR.startsWith(q) && !aR.startsWith(q)) return 1;
+        return aR.localeCompare(bR, undefined, { numeric: true });
+      })
       .slice(0, 8);
   }, [allStudents, searchQuery]);
 

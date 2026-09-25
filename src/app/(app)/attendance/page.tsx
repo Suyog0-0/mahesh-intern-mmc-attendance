@@ -36,6 +36,7 @@ export default async function AttendancePage({
   return (
     <Suspense fallback={<div className="p-8 text-center text-xs text-neutral-400">Loading attendance board…</div>}>
       <AttendanceBoard
+        key={date}
         batchName={batch.name}
         date={date}
         initialRecords={records}
