@@ -2,8 +2,8 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
-// Only allow same-site relative paths to prevent open redirects.
 function safeNext(next: string | null): string {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
   return "/";
@@ -16,6 +16,7 @@ export default function LoginForm() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -37,14 +38,11 @@ export default function LoginForm() {
       } | null;
 
       if (!res.ok) {
-        // The API returns one generic message for all auth failures
-        // (per .clauderules login-security rules) — just surface it.
         setError(data?.error ?? "Invalid username or password");
         setPending(false);
         return;
       }
 
-      // Cookie is set by the route handler; refresh so middleware sees it.
       router.replace(next);
       router.refresh();
     } catch {
@@ -56,14 +54,14 @@ export default function LoginForm() {
   return (
     <div className="w-full max-w-sm">
       <div className="mb-8 text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#9E1B32] dark:text-[#d4677c]">
+        <span className="inline-flex h-10 px-3 items-center justify-center rounded-xl bg-[#9E1B32] text-sm font-black tracking-normal text-white shadow-sm mb-3">
           MMC
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+        </span>
+        <h1 className="text-2xl font-bold tracking-tight">
           Attendance Login
         </h1>
-        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-          Sign in to take and manage attendance.
+        <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+          Sign in to access and manage intern attendance.
         </p>
       </div>
 
@@ -74,13 +72,13 @@ export default function LoginForm() {
         {error && (
           <div
             role="alert"
-            className="mb-4 rounded-lg border border-[#9E1B32]/30 bg-[#9E1B32]/10 px-3 py-2 text-sm text-[#9E1B32] dark:border-[#d4677c]/30 dark:bg-[#d4677c]/10 dark:text-[#e8a3b0]"
+            className="mb-4 rounded-lg border border-[#9E1B32]/30 bg-[#9E1B32]/10 px-3.5 py-2.5 text-xs font-semibold text-[#9E1B32] dark:border-[#d4677c]/30 dark:bg-[#d4677c]/10 dark:text-[#e8a3b0]"
           >
             {error}
           </div>
         )}
 
-        <label htmlFor="username" className="block text-sm font-medium">
+        <label htmlFor="username" className="block text-xs font-bold text-neutral-700 dark:text-neutral-300">
           Username
         </label>
         <input
@@ -93,29 +91,52 @@ export default function LoginForm() {
           required
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700 dark:focus:border-[#d4677c]"
+          placeholder="e.g. admin or staff"
+          className="mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-transparent px-3.5 py-2.5 text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700 dark:text-neutral-100 dark:focus:border-[#d4677c]"
         />
 
-        <label htmlFor="password" className="mt-4 block text-sm font-medium">
+        <label htmlFor="password" className="mt-4 block text-xs font-bold text-neutral-700 dark:text-neutral-300">
           Password
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700 dark:focus:border-[#d4677c]"
-        />
+        <div className="relative mt-1.5">
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter password"
+            className="w-full rounded-lg border border-neutral-300/80 bg-transparent pl-3.5 pr-10 py-2.5 text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700 dark:text-neutral-100 dark:focus:border-[#d4677c]"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="absolute right-3 top-2.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
+        </div>
 
         <button
           type="submit"
           disabled={pending}
-          className="mt-6 w-full rounded-lg bg-[#9E1B32] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#7d1527] disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-[#b82540]"
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-[#9E1B32] px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#7d1527] disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-[#b82540]"
         >
-          {pending ? "Signing in…" : "Sign in"}
+          {pending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Signing in…</span>
+            </>
+          ) : (
+            "Sign in"
+          )}
         </button>
       </form>
     </div>
