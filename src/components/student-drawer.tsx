@@ -6,7 +6,10 @@ import { X, Pencil, Loader2, CalendarPlus, CheckCircle2, Download, RotateCw, Cal
 import { Modal } from "@/components/modal";
 import { StatusBadge } from "@/components/status-badge";
 import { useToast } from "@/components/toast-provider";
-import { formatDate } from "@/lib/date";
+import { formatDate, formatPostingPeriod } from "@/lib/date";
+import { ATTENDANCE_DEPARTMENT_LABEL } from "@/lib/attendance/types";
+import { NepaliDateInput } from "@/components/nepali-date-input";
+import { RecordedBy } from "@/components/recorded-by";
 import type { Student } from "@/lib/db/queries/students";
 import type { Batch } from "@/lib/db/queries/batches";
 import type { StudentSummary } from "@/lib/attendance/summary";
@@ -17,8 +20,8 @@ interface StudentHistoryData {
   student: Student;
   batch: Batch;
   summary: StudentSummary;
-  records: AttendanceRecord[];
-  leaves: Leave[];
+  records: Array<AttendanceRecord & { markedByName: string | null }>;
+  leaves: Array<Leave & { createdByName: string | null }>;
 }
 
 interface StudentDrawerProps {
@@ -166,7 +169,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                 <button
                   aria-label="Close intern details"
                   title="Close"
-                  className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 transition-colors hover:border-neutral-300 hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                  className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 transition-colors hover:border-neutral-300 hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -183,7 +186,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
               {visibleData && (
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono rounded-md bg-[#9E1B32]/10 px-2.5 py-0.5 text-xs font-semibold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">
+                    <span className="font-mono rounded-md bg-[#1E4F91]/10 px-2.5 py-0.5 text-xs font-semibold text-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">
                       Roll #{visibleData.student.rollNumber}
                     </span>
                     <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -194,13 +197,13 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                     {visibleData.student.name}
                   </Dialog.Title>
                   <Dialog.Description className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                    Posting: <strong className="font-semibold text-neutral-700 dark:text-neutral-300">{visibleData.student.postingPeriod}</strong>
+                    Posting: <strong className="font-semibold text-neutral-700 dark:text-neutral-300">{formatPostingPeriod(visibleData.student.postingPeriod)}</strong>
                   </Dialog.Description>
 
                   <div className="mt-4 flex items-center gap-2">
                     <button
                       onClick={openLeaveForm}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#9E1B32] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#7d1527] focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-[#b82540]"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E4F91] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#12345D] focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:hover:bg-[#477DB9]"
                     >
                       <CalendarPlus className="h-3.5 w-3.5" />
                       Record Leave
@@ -212,7 +215,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                           onClose();
                           onEditStudent(visibleData.student);
                         }}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300/80 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-2xs hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300/80 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-2xs hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                         Edit Record
@@ -220,7 +223,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                     )}
                     <button
                       onClick={downloadCSV}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300/80 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-2xs hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300/80 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-2xs hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
                     >
                       <Download className="h-3.5 w-3.5" />
                       Export CSV
@@ -275,7 +278,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                   onClick={() => setActiveTab("timeline")}
                   className={`shrink-0 border-b-2 px-3 py-3 font-semibold transition-colors ${
                     activeTab === "timeline"
-                      ? "border-[#9E1B32] text-[#9E1B32] dark:border-[#e8a3b0] dark:text-[#e8a3b0]"
+                      ? "border-[#1E4F91] text-[#1E4F91] dark:border-[#A9C5EA] dark:text-[#A9C5EA]"
                       : "border-transparent text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
                   }`}
                 >
@@ -285,7 +288,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                   onClick={() => setActiveTab("leaves")}
                   className={`shrink-0 border-b-2 px-3 py-3 font-semibold transition-colors ${
                     activeTab === "leaves"
-                      ? "border-[#9E1B32] text-[#9E1B32] dark:border-[#e8a3b0] dark:text-[#e8a3b0]"
+                      ? "border-[#1E4F91] text-[#1E4F91] dark:border-[#A9C5EA] dark:text-[#A9C5EA]"
                       : "border-transparent text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
                   }`}
                 >
@@ -295,7 +298,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                   onClick={() => setActiveTab("info")}
                   className={`shrink-0 border-b-2 px-3 py-3 font-semibold transition-colors ${
                     activeTab === "info"
-                      ? "border-[#9E1B32] text-[#9E1B32] dark:border-[#e8a3b0] dark:text-[#e8a3b0]"
+                      ? "border-[#1E4F91] text-[#1E4F91] dark:border-[#A9C5EA] dark:text-[#A9C5EA]"
                       : "border-transparent text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
                   }`}
                 >
@@ -310,7 +313,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                 <div role="status" aria-label="Loading intern history" className="animate-pulse space-y-5">
                   <div className="flex items-center justify-between">
                     <div className="h-4 w-32 rounded bg-neutral-200 dark:bg-neutral-800" />
-                    <span className="inline-flex items-center gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400"><Loader2 className="h-3.5 w-3.5 animate-spin text-[#9E1B32]" />Loading history</span>
+                    <span className="inline-flex items-center gap-2 text-xs font-medium text-neutral-500 dark:text-neutral-400"><Loader2 className="h-3.5 w-3.5 animate-spin text-[#1E4F91]" />Loading history</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {[0, 1, 2, 3].map((item) => <div key={item} className="h-20 rounded-lg border border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900" />)}
@@ -341,13 +344,13 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                       <p className="font-semibold text-neutral-800 dark:text-neutral-100">
                         No exceptions recorded
                       </p>
-                      <p className="mt-1 text-xs">There are no absence or late records for this intern.</p>
+                      <p className="mt-1 text-xs">There are no attendance exceptions or department records for this intern.</p>
                     </div>
                   ) : (
                     <div className="relative border-l border-neutral-200/80 pl-5 dark:border-neutral-800 space-y-4">
                       {visibleData.records.map((r) => (
                         <div key={r.id} className="relative">
-                          <span className="absolute -left-[25px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#9E1B32] dark:border-neutral-900 dark:bg-[#e8a3b0]" />
+                          <span className="absolute -left-[25px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#1E4F91] dark:border-neutral-900 dark:bg-[#A9C5EA]" />
                           <div className="flex items-start justify-between gap-3 rounded-lg border border-neutral-200/60 bg-white p-3.5 shadow-2xs dark:border-neutral-800/80 dark:bg-neutral-800/40">
                             <div>
                               <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
@@ -358,8 +361,9 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                                   &quot;{r.remarks}&quot;
                                 </p>
                               )}
+                              <RecordedBy name={r.markedByName} />
                             </div>
-                            <StatusBadge status={r.status} />
+                            <div className="flex shrink-0 flex-col items-end gap-1"><StatusBadge status={r.status} />{r.department && <span className="text-[10px] font-medium text-teal-700 dark:text-teal-300">{ATTENDANCE_DEPARTMENT_LABEL[r.department]}</span>}</div>
                           </div>
                         </div>
                       ))}
@@ -397,6 +401,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                             No reason specified
                           </p>
                         )}
+                        <RecordedBy name={l.createdByName} />
                       </div>
                     ))
                   )}
@@ -413,7 +418,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                       <div>
                         <dt className="text-neutral-400 font-medium">Posting Period</dt>
                         <dd className="mt-0.5 font-semibold text-neutral-800 dark:text-neutral-200">
-                          {visibleData.student.postingPeriod}
+                          {formatPostingPeriod(visibleData.student.postingPeriod)}
                         </dd>
                       </div>
                       <div>
@@ -459,22 +464,18 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
               Start Date
-              <input
+              <NepaliDateInput
                 required
-                type="date"
                 value={leaveStartDate}
-                onChange={(e) => setLeaveStartDate(e.target.value)}
-                className={inputCls}
+                onChange={setLeaveStartDate}
               />
             </label>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
               End Date
-              <input
+              <NepaliDateInput
                 required
-                type="date"
                 value={leaveEndDate}
-                onChange={(e) => setLeaveEndDate(e.target.value)}
-                className={inputCls}
+                onChange={setLeaveEndDate}
               />
             </label>
           </div>
@@ -498,7 +499,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
             <button
               type="submit"
               disabled={leaveSubmitting}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d1527] disabled:opacity-60 dark:hover:bg-[#b82540]"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E4F91] px-4 py-2 text-xs font-semibold text-white hover:bg-[#12345D] disabled:opacity-60 dark:hover:bg-[#477DB9]"
             >
               {leaveSubmitting ? (
                 <>
@@ -517,4 +518,4 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
 }
 
 const inputCls =
-  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-xs text-neutral-900 outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
+  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-xs text-neutral-900 outline-none focus:border-[#1E4F91] focus:ring-2 focus:ring-[#1E4F91]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";

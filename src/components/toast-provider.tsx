@@ -98,7 +98,7 @@ const TONE_STYLES: Record<ToastTone, {
   info: {
     icon: Info,
     iconClass: "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200",
-    borderClass: "border-l-[#9E1B32]",
+    borderClass: "border-l-[#1E4F91]",
     surfaceClass: "border-neutral-200 bg-neutral-50/95 dark:border-neutral-700 dark:bg-neutral-900/95",
     titleClass: "text-neutral-950 dark:text-neutral-100",
   },
@@ -167,7 +167,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => dismiss(item.id)}
-                className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+                className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
                 aria-label="Dismiss notification"
               >
                 <X className="h-4 w-4" />

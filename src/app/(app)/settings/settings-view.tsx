@@ -18,9 +18,10 @@ import {
   ShieldCheck,
   Loader2,
 } from "lucide-react";
+import type { AppRole } from "@/lib/auth/roles";
 
 interface Props {
-  session: { name: string; username: string; role: "admin" | "staff" };
+  session: { name: string; username: string; role: AppRole };
   currentBatch?: { name: string; startDate: string; endDate: string };
 }
 
@@ -113,13 +114,13 @@ export function SettingsView({ session, currentBatch }: Props) {
         {/* User Account Profile */}
         <Card className="flex flex-col gap-4">
           <div className="flex items-center gap-2 border-b border-neutral-100 pb-3 dark:border-neutral-800">
-            <User className="h-4 w-4 text-[#9E1B32] dark:text-[#e8a3b0]" />
+            <User className="h-4 w-4 text-[#1E4F91] dark:text-[#A9C5EA]" />
             <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
               User Profile
             </h2>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#9E1B32]/10 text-lg font-bold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#1E4F91]/10 text-lg font-bold text-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">
               {initials(session.name)}
             </div>
             <div>
@@ -130,7 +131,7 @@ export function SettingsView({ session, currentBatch }: Props) {
                 @{session.username}
               </p>
               <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-md bg-neutral-100 px-2.5 py-0.5 text-[11px] font-semibold capitalize text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-                <Shield className="h-3 w-3 text-[#9E1B32] dark:text-[#e8a3b0]" />
+                <Shield className="h-3 w-3 text-[#1E4F91] dark:text-[#A9C5EA]" />
                 {session.role} Permissions
               </div>
             </div>
@@ -140,7 +141,7 @@ export function SettingsView({ session, currentBatch }: Props) {
         {/* Theme Appearance Preferences */}
         <Card className="flex flex-col gap-4">
           <div className="flex items-center gap-2 border-b border-neutral-100 pb-3 dark:border-neutral-800">
-            <Sliders className="h-4 w-4 text-[#9E1B32] dark:text-[#e8a3b0]" />
+            <Sliders className="h-4 w-4 text-[#1E4F91] dark:text-[#A9C5EA]" />
             <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
               Appearance & Theme
             </h2>
@@ -156,7 +157,7 @@ export function SettingsView({ session, currentBatch }: Props) {
                 onClick={() => handleThemeChange("light")}
                 className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${
                   theme === "light"
-                    ? "bg-white text-[#9E1B32] shadow-xs dark:bg-neutral-700 dark:text-neutral-100"
+                    ? "bg-white text-[#1E4F91] shadow-xs dark:bg-neutral-700 dark:text-neutral-100"
                     : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
                 }`}
               >
@@ -169,7 +170,7 @@ export function SettingsView({ session, currentBatch }: Props) {
                 onClick={() => handleThemeChange("dark")}
                 className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${
                   theme === "dark"
-                    ? "bg-white text-[#9E1B32] shadow-xs dark:bg-neutral-700 dark:text-neutral-100"
+                    ? "bg-white text-[#1E4F91] shadow-xs dark:bg-neutral-700 dark:text-neutral-100"
                     : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
                 }`}
               >
@@ -182,7 +183,7 @@ export function SettingsView({ session, currentBatch }: Props) {
                 onClick={() => handleThemeChange("system")}
                 className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${
                   theme === "system"
-                    ? "bg-white text-[#9E1B32] shadow-xs dark:bg-neutral-700 dark:text-neutral-100"
+                    ? "bg-white text-[#1E4F91] shadow-xs dark:bg-neutral-700 dark:text-neutral-100"
                     : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
                 }`}
               >
@@ -203,7 +204,7 @@ export function SettingsView({ session, currentBatch }: Props) {
         {/* Security & Authentication Actions */}
         <Card className="flex flex-col gap-4 md:col-span-2">
           <div className="flex items-center gap-2 border-b border-neutral-100 pb-3 dark:border-neutral-800">
-            <Lock className="h-4 w-4 text-[#9E1B32] dark:text-[#e8a3b0]" />
+            <Lock className="h-4 w-4 text-[#1E4F91] dark:text-[#A9C5EA]" />
             <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
               Authentication & Security Actions
             </h2>
@@ -218,7 +219,7 @@ export function SettingsView({ session, currentBatch }: Props) {
               }}
               className="flex items-center justify-center gap-2 rounded-xl border border-neutral-300/80 bg-white p-3.5 text-xs font-bold text-neutral-800 shadow-2xs hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 transition-colors"
             >
-              <KeyRound className="h-4 w-4 text-[#9E1B32] dark:text-[#e8a3b0]" />
+              <KeyRound className="h-4 w-4 text-[#1E4F91] dark:text-[#A9C5EA]" />
               <span>Change My Password</span>
             </button>
 
@@ -274,7 +275,7 @@ export function SettingsView({ session, currentBatch }: Props) {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="••••••••"
-              className="mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-xs text-neutral-900 outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100"
+              className="mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-xs text-neutral-900 outline-none focus:border-[#1E4F91] focus:ring-2 focus:ring-[#1E4F91]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100"
             />
           </label>
           <Modal.Footer>
@@ -288,7 +289,7 @@ export function SettingsView({ session, currentBatch }: Props) {
             <button
               type="submit"
               disabled={passPending}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d1527] disabled:opacity-60 dark:hover:bg-[#b82540]"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E4F91] px-4 py-2 text-xs font-semibold text-white hover:bg-[#12345D] disabled:opacity-60 dark:hover:bg-[#477DB9]"
             >
               {passPending ? (
                 <>

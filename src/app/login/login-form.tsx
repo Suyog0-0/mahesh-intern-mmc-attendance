@@ -54,9 +54,9 @@ export default function LoginForm() {
   return (
     <div className="login-enter w-full max-w-[25rem]">
       <div className="mb-6 flex items-center gap-3 sm:mb-8">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#9E1B32] text-sm font-black tracking-wide text-white shadow-sm shadow-[#9E1B32]/20">MMC</span>
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#B4233A] text-sm font-black tracking-wide text-white shadow-sm shadow-[#B4233A]/20">MMC</span>
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9E1B32] dark:text-[#e8a3b0]">MMC · Intern Services</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#1E4F91] dark:text-[#A9C5EA]">MMC · Intern Services</p>
           <p className="mt-0.5 text-sm font-semibold text-neutral-900 dark:text-neutral-100">Attendance management</p>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function LoginForm() {
         <label htmlFor="username" className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
           Username
         </label>
-        <div className="login-field mt-2 flex h-12 items-center gap-3 rounded-lg border border-neutral-300/90 bg-white px-3.5 transition-all focus-within:border-[#9E1B32] focus-within:ring-4 focus-within:ring-[#9E1B32]/[0.09] dark:border-neutral-700 dark:bg-neutral-950 dark:focus-within:border-[#d4677c]">
+        <div className="login-field mt-2 flex h-12 items-center gap-3 rounded-lg border border-neutral-300/90 bg-white px-3.5 transition-all focus-within:border-[#1E4F91] focus-within:ring-4 focus-within:ring-[#1E4F91]/[0.09] dark:border-neutral-700 dark:bg-neutral-950 dark:focus-within:border-[#84AEE4]">
           <UserRound className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden="true" />
           <input
             id="username"
@@ -105,7 +105,7 @@ export default function LoginForm() {
         <label htmlFor="password" className="mt-5 block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
           Password
         </label>
-        <div className="login-field mt-2 flex h-12 items-center gap-3 rounded-lg border border-neutral-300/90 bg-white px-3.5 transition-all focus-within:border-[#9E1B32] focus-within:ring-4 focus-within:ring-[#9E1B32]/[0.09] dark:border-neutral-700 dark:bg-neutral-950 dark:focus-within:border-[#d4677c]">
+        <div className="login-field mt-2 flex h-12 items-center gap-3 rounded-lg border border-neutral-300/90 bg-white px-3.5 transition-all focus-within:border-[#1E4F91] focus-within:ring-4 focus-within:ring-[#1E4F91]/[0.09] dark:border-neutral-700 dark:bg-neutral-950 dark:focus-within:border-[#84AEE4]">
           <LockKeyhole className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden="true" />
           <input
             id="password"
@@ -125,7 +125,7 @@ export default function LoginForm() {
             onClick={() => setShowPassword((prev) => !prev)}
             aria-label={showPassword ? "Hide password" : "Show password"}
             aria-pressed={showPassword}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
           >
             {showPassword ? (
               <EyeOff className="h-4 w-4" />
@@ -143,7 +143,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={pending}
-          className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#9E1B32] px-4 text-sm font-semibold text-white shadow-sm shadow-[#9E1B32]/15 transition-all hover:bg-[#86172b] active:translate-y-px focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#9E1B32]/20 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none dark:hover:bg-[#b82540]"
+          className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#1E4F91] px-4 text-sm font-semibold text-white shadow-sm shadow-[#1E4F91]/15 transition-all hover:bg-[#163B69] active:translate-y-px focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1E4F91]/20 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none dark:hover:bg-[#477DB9]"
         >
           {pending ? (
             <>

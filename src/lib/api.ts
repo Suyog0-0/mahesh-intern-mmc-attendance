@@ -3,11 +3,13 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth/session";
 import type { SessionPayload } from "@/lib/auth/jwt";
 import type { Result } from "@/lib/result";
+import type { AppRole } from "@/lib/auth/roles";
+import { getUserRoleById } from "@/lib/db/queries/users";
 
 // Small helpers that keep route handlers thin: authorize -> validate -> call
 // shared logic -> respond.
 
-type Role = "admin" | "staff";
+type Role = AppRole;
 export type Guard<T> =
   | { ok: true; data: T }
   | { ok: false; response: NextResponse };
@@ -20,10 +22,21 @@ export function jsonError(message: string, status: number, extra?: object) {
 export async function authorize(roles: Role[]): Promise<Guard<SessionPayload>> {
   const session = await getSession();
   if (!session) return { ok: false, response: jsonError("Not authenticated", 401) };
-  if (!roles.includes(session.role)) {
+  let role: AppRole | undefined;
+  try {
+    role = await getUserRoleById(session.userId);
+  } catch {
+    return { ok: false, response: jsonError("Could not verify authorization", 503) };
+  }
+  if (!role) return { ok: false, response: jsonError("Not authenticated", 401) };
+  const currentSession = { ...session, role };
+  const allowedRoles = roles.includes("admin")
+    ? [...roles, "superadmin" as const]
+    : roles;
+  if (!allowedRoles.includes(role)) {
     return { ok: false, response: jsonError("Forbidden", 403) };
   }
-  return { ok: true, data: session };
+  return { ok: true, data: currentSession };
 }
 
 function validate<S extends z.ZodType>(

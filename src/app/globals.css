@@ -4,13 +4,19 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
+  --background: #f7f9fc;
   --foreground: #0f172a;
+  --brand-blue: #1e4f91;
+  --brand-blue-deep: #163b69;
+  --brand-red: #b4233a;
 }
 
 .dark {
   --background: #090d16;
   --foreground: #f8fafc;
+  --brand-blue: #a9c5ea;
+  --brand-blue-deep: #84aee4;
+  --brand-red: #e28b9a;
 }
 
 @theme inline {
@@ -53,10 +59,7 @@ body {
 @media (max-width: 767px) {
   input, select, textarea { font-size: 16px; }
   input::placeholder, textarea::placeholder { font-size: 13px !important; line-height: 1.25; }
-  input[type="date"] { font-size: 13px; }
-  input[type="date"]:focus { font-size: 13px; }
   select { font-size: 13px; }
-  input[type="date"] { min-height: 2.75rem; }
   .report-filter-control { height: 2.75rem; min-height: 2.75rem; box-sizing: border-box; }
   .report-date-input { font-size: 13px; }
   .report-filter-select { font-size: 13px; }
@@ -66,11 +69,11 @@ body {
 }
 
 ::selection {
-  background-color: rgba(158, 27, 50, 0.15);
-  color: #9E1B32;
+  background-color: rgba(30, 79, 145, 0.16);
+  color: #1E4F91;
 }
 
 .dark ::selection {
-  background-color: rgba(232, 163, 176, 0.25);
-  color: #e8a3b0;
+  background-color: rgba(169, 197, 234, 0.22);
+  color: #A9C5EA;
 }

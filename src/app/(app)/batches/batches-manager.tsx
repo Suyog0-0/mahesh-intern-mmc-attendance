@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast-provider";
-import { formatDate } from "@/lib/date";
+import { formatDate, todayISO } from "@/lib/date";
 import type { Batch } from "@/lib/db/queries/batches";
+import { Pagination } from "@/components/pagination";
+import { NepaliDateInput } from "@/components/nepali-date-input";
 import {
   Plus,
   FolderKanban,
@@ -13,6 +15,7 @@ import {
   Pencil,
   Trash2,
   Eye,
+  Download,
 } from "lucide-react";
 
 type BatchRow = Batch & { studentCount: number };
@@ -31,6 +34,34 @@ export function BatchesManager({
   const [switching, setSwitching] = useState<number | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [viewTarget, setViewTarget] = useState<BatchRow | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const pageCount = Math.max(1, Math.ceil(batches.length / pageSize));
+  const visiblePage = Math.min(page, pageCount);
+  const visibleBatches = batches.slice((visiblePage - 1) * pageSize, visiblePage * pageSize);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
+
+  function downloadBatches() {
+    const fromIndex = batches.findIndex((batch) => String(batch.id) === exportFrom);
+    const toIndex = batches.findIndex((batch) => String(batch.id) === exportTo);
+    if (fromIndex < 0 || toIndex < 0) return;
+    const [start, end] = fromIndex <= toIndex ? [fromIndex, toIndex] : [toIndex, fromIndex];
+    const selected = batches.slice(start, end + 1);
+    const quote = (value: string | number) => `"${String(value).replaceAll('"', '""')}"`;
+    const content = [
+      ["Batch", "Start date", "End date", "Interns", "Current"].map(quote).join(","),
+      ...selected.map((batch) => [batch.name, formatDate(batch.startDate), formatDate(batch.endDate), batch.studentCount, batch.isCurrent ? "Yes" : "No"].map(quote).join(",")),
+    ].join("\n");
+    const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `batches_${formatDate(todayISO()).replace(/[^\p{L}\p{N}]+/gu, "-")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setExportOpen(false);
+  }
 
   // Edit state
   const [editTarget, setEditTarget] = useState<BatchRow | null>(null);
@@ -182,7 +213,7 @@ export function BatchesManager({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-neutral-200/80 pb-5 dark:border-neutral-800">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50 flex items-center gap-2">
-            <FolderKanban className="h-6 w-6 text-[#9E1B32] dark:text-[#e8a3b0]" />
+            <FolderKanban className="h-6 w-6 text-[#1E4F91] dark:text-[#A9C5EA]" />
             Batches Management
           </h1>
           <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
@@ -192,7 +223,7 @@ export function BatchesManager({
 
         <button
           onClick={() => setFormOpen(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#9E1B32] px-4 py-2.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#7d1527] focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-[#b82540]"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1E4F91] px-4 py-2.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#12345D] focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:hover:bg-[#477DB9]"
         >
           <Plus className="h-4 w-4" />
           <span>Create Batch</span>
@@ -204,6 +235,7 @@ export function BatchesManager({
           <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">
             All Batches ({batches.length})
           </h2>
+          <button type="button" aria-label="Download batches" title="Download batches" onClick={() => { if (batches.length) { setExportFrom(String(batches[0].id)); setExportTo(String(batches[batches.length - 1].id)); setExportOpen(true); } }} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 transition-colors hover:bg-neutral-50 hover:text-[#1E4F91] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"><Download className="h-4 w-4" /></button>
         </div>
 
         {/* Desktop table */}
@@ -218,7 +250,7 @@ export function BatchesManager({
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
-              {batches.map((b) => (
+              {visibleBatches.map((b) => (
                 <tr key={b.id} className="transition-colors hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40">
                   <td data-label="Batch" className="px-4 py-3.5">
                     <div className="flex items-center gap-2">
@@ -248,7 +280,7 @@ export function BatchesManager({
                         >
                           {switching === b.id ? (
                             <>
-                              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#9E1B32]" />
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#1E4F91]" />
                               Updating…
                             </>
                           ) : (
@@ -293,7 +325,7 @@ export function BatchesManager({
 
         {/* Mobile batch records */}
         <ul className="grid gap-3 md:hidden">
-          {batches.map((batch) => (
+          {visibleBatches.map((batch) => (
             <li key={batch.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-900">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -309,13 +341,22 @@ export function BatchesManager({
                 <button type="button" aria-label={`View ${batch.name}`} title="View batch" onClick={() => setViewTarget(batch)} className="mr-auto flex h-9 w-9 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"><Eye className="h-4 w-4" /></button>
                 <button type="button" aria-label={`Edit ${batch.name}`} title="Edit batch" onClick={() => openEdit(batch)} className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-100 text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:border-blue-900/50 dark:text-blue-300 dark:hover:bg-blue-950/40"><Pencil className="h-4 w-4" /></button>
                 {!batch.isCurrent && <button type="button" aria-label={`Delete ${batch.name}`} title="Delete batch" onClick={() => openDelete(batch)} className="flex h-9 w-9 items-center justify-center rounded-lg text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 dark:text-red-300 dark:hover:bg-red-950/40"><Trash2 className="h-4 w-4" /></button>}
-                {!batch.isCurrent && <button type="button" onClick={() => makeCurrent(batch.id)} disabled={switching === batch.id} className="ml-1 min-h-9 rounded-lg bg-[#9E1B32]/[0.07] px-3 text-xs font-semibold text-[#9E1B32] hover:bg-[#9E1B32]/15 disabled:opacity-50 dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">{switching === batch.id ? "Updating…" : "Make current"}</button>}
+                {!batch.isCurrent && <button type="button" onClick={() => makeCurrent(batch.id)} disabled={switching === batch.id} className="ml-1 min-h-9 rounded-lg bg-[#1E4F91]/[0.07] px-3 text-xs font-semibold text-[#1E4F91] hover:bg-[#1E4F91]/15 disabled:opacity-50 dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">{switching === batch.id ? "Updating…" : "Make current"}</button>}
               </div>
             </li>
           ))}
           {batches.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">No batches yet. Create a batch to start organizing interns.</li>}
         </ul>
+        <Pagination page={visiblePage} pageCount={pageCount} total={batches.length} pageSize={pageSize} onPageChange={setPage} />
       </section>
+
+      <Modal open={exportOpen} onOpenChange={setExportOpen} title="Download batch data" description="Choose the first and last batch to include in the CSV export.">
+        <div className="grid gap-3 pt-1 sm:grid-cols-2">
+          <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">From batch<select value={exportFrom} onChange={(event) => setExportFrom(event.target.value)} className={inputCls}>{batches.map((batch) => <option key={batch.id} value={batch.id}>{batch.name}</option>)}</select></label>
+          <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">To batch<select value={exportTo} onChange={(event) => setExportTo(event.target.value)} className={inputCls}>{batches.map((batch) => <option key={batch.id} value={batch.id}>{batch.name}</option>)}</select></label>
+        </div>
+        <Modal.Footer><button type="button" onClick={() => setExportOpen(false)} className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 dark:border-neutral-700 dark:text-neutral-300">Cancel</button><button type="button" onClick={downloadBatches} className="inline-flex items-center gap-2 rounded-lg bg-[#1E4F91] px-4 py-2 text-xs font-semibold text-white"><Download className="h-3.5 w-3.5" />Download CSV</button></Modal.Footer>
+      </Modal>
 
       <Modal open={!!viewTarget} onOpenChange={(open) => !open && setViewTarget(null)} title={viewTarget?.name ?? "Batch details"} description="Batch overview">
         {viewTarget && <div className="grid grid-cols-2 gap-3 pt-1">
@@ -358,29 +399,25 @@ export function BatchesManager({
               onChange={(e) =>
                 setForm({ ...form, isCurrent: e.target.checked })
               }
-              className="h-4 w-4 rounded border-neutral-300 text-[#9E1B32] focus:ring-[#9E1B32]"
+              className="h-4 w-4 rounded border-neutral-300 text-[#1E4F91] focus:ring-[#1E4F91]"
             />
             Mark as active current batch immediately
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
               Start Date
-              <input
+              <NepaliDateInput
                 required
-                type="date"
                 value={form.startDate}
-                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                className={inputCls}
+                onChange={(value) => setForm({ ...form, startDate: value })}
               />
             </label>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
               End Date
-              <input
+              <NepaliDateInput
                 required
-                type="date"
                 value={form.endDate}
-                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                className={inputCls}
+                onChange={(value) => setForm({ ...form, endDate: value })}
               />
             </label>
           </div>
@@ -395,7 +432,7 @@ export function BatchesManager({
             <button
               type="submit"
               disabled={pending}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d1527] disabled:opacity-60 dark:hover:bg-[#b82540]"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E4F91] px-4 py-2 text-xs font-semibold text-white hover:bg-[#12345D] disabled:opacity-60 dark:hover:bg-[#477DB9]"
             >
               {pending ? (
                 <>
@@ -438,22 +475,18 @@ export function BatchesManager({
           <div className="grid grid-cols-2 gap-3">
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
               Start Date
-              <input
+              <NepaliDateInput
                 required
-                type="date"
                 value={editForm.startDate}
-                onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
-                className={inputCls}
+                onChange={(value) => setEditForm({ ...editForm, startDate: value })}
               />
             </label>
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
               End Date
-              <input
+              <NepaliDateInput
                 required
-                type="date"
                 value={editForm.endDate}
-                onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
-                className={inputCls}
+                onChange={(value) => setEditForm({ ...editForm, endDate: value })}
               />
             </label>
           </div>
@@ -468,7 +501,7 @@ export function BatchesManager({
             <button
               type="submit"
               disabled={editPending}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d1527] disabled:opacity-60 dark:hover:bg-[#b82540]"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E4F91] px-4 py-2 text-xs font-semibold text-white hover:bg-[#12345D] disabled:opacity-60 dark:hover:bg-[#477DB9]"
             >
               {editPending ? (
                 <>
@@ -535,4 +568,4 @@ export function BatchesManager({
 }
 
 const inputCls =
-  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-base sm:text-xs text-neutral-900 outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
+  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-base sm:text-xs text-neutral-900 outline-none focus:border-[#1E4F91] focus:ring-2 focus:ring-[#1E4F91]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";

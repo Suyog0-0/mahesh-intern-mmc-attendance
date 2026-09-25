@@ -5,6 +5,7 @@ import { Card } from "@/components/card";
 import { TopAbsenteesList } from "@/components/top-absentees-list";
 import { formatDate } from "@/lib/date";
 import { ArrowRight, Calendar, CheckCircle2, AlertCircle } from "lucide-react";
+import { hasAdminAccess } from "@/lib/auth/roles";
 
 export default async function DashboardPage() {
   const session = await requirePageSession();
@@ -51,7 +52,8 @@ export default async function DashboardPage() {
       </div>
 
       {/* Hero: today's attendance at a glance */}
-      <Card className="!p-4 sm:!p-5">
+      <Card className="relative overflow-hidden !p-4 sm:!p-5">
+        <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-emerald-600 via-emerald-500/40 to-transparent" aria-hidden="true" />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
@@ -66,14 +68,15 @@ export default async function DashboardPage() {
             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
               {hasInterns ? `${presentPct}% attendance today` : "Add interns to this batch before recording attendance."}
             </p>
+            {hasInterns && <div className="mt-3 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800" role="progressbar" aria-label="Today's attendance rate" aria-valuemin={0} aria-valuemax={100} aria-valuenow={presentPct}><div className="h-full rounded-full bg-emerald-600 transition-[width] duration-500 dark:bg-emerald-400" style={{ width: `${presentPct}%` }} /></div>}
           </div>
           {hasInterns ? (
-            <Link href="/attendance?openModal=true" className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#9E1B32] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#7d1527] dark:hover:bg-[#b82540]">
+            <Link href="/attendance?openModal=true" className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1E4F91] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#12345D] dark:hover:bg-[#477DB9]">
               <CheckCircle2 className="h-4 w-4" />
               <span>Take attendance</span>
             </Link>
-          ) : session.role === "admin" ? (
-            <Link href="/students" className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#9E1B32] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#7d1527] dark:hover:bg-[#b82540]">
+          ) : hasAdminAccess(session.role) ? (
+            <Link href="/students" className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1E4F91] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#12345D] dark:hover:bg-[#477DB9]">
               <CheckCircle2 className="h-4 w-4" />
               <span>Add interns</span>
             </Link>
@@ -110,13 +113,13 @@ export default async function DashboardPage() {
         </div>}
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Recent attendance</h2>
             <Link
               href="/reports"
-              className="inline-flex items-center gap-1 text-xs font-medium text-[#9E1B32] hover:underline dark:text-[#e07c8d]"
+              className="inline-flex items-center gap-1 text-xs font-medium text-[#1E4F91] hover:underline dark:text-[#A9C5EA]"
             >
               <span>Full report</span>
               <ArrowRight className="h-3 w-3" />

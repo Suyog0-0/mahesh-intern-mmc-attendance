@@ -37,7 +37,7 @@ export async function proxy(request: NextRequest) {
 
   if (
     ADMIN_ONLY_PREFIXES.some((p) => pathname.startsWith(p)) &&
-    session.role !== "admin"
+    session.role !== "admin" && session.role !== "superadmin"
   ) {
     if (isApiRoute) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

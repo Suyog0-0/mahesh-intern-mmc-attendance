@@ -34,15 +34,15 @@ export function TopAbsenteesList({ absentees }: { absentees: Absentee[] }) {
               openStudent(s.id);
             }
           }}
-          className="group flex cursor-pointer items-center justify-between py-2.5 text-xs transition-colors hover:text-[#9E1B32] first:pt-0 last:pb-0 dark:hover:text-[#e8a3b0]"
+          className="group flex cursor-pointer items-center justify-between py-2.5 text-xs transition-colors hover:text-[#1E4F91] first:pt-0 last:pb-0 dark:hover:text-[#A9C5EA]"
           title="Click to view full intern history"
         >
           <span className="min-w-0 truncate flex items-center gap-2">
             <UserX className="h-3.5 w-3.5 text-red-500 shrink-0" />
-            <span className="font-mono font-medium text-neutral-400 group-hover:text-[#9E1B32] dark:group-hover:text-[#e8a3b0]">
+            <span className="font-mono font-medium text-neutral-400 group-hover:text-[#1E4F91] dark:group-hover:text-[#A9C5EA]">
               #{s.rollNumber}
             </span>{" "}
-            <span className="font-semibold text-neutral-900 group-hover:text-[#9E1B32] dark:text-neutral-100 dark:group-hover:text-[#e8a3b0]">
+            <span className="font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">
               {s.name}
             </span>
           </span>

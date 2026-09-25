@@ -6,6 +6,9 @@ import { Modal } from "@/components/modal";
 import { useToast } from "@/components/toast-provider";
 import { useStudentDrawer } from "@/components/student-drawer-context";
 import { formatDate } from "@/lib/date";
+import { Pagination } from "@/components/pagination";
+import { RecordedBy } from "@/components/recorded-by";
+import { NepaliDateInput } from "@/components/nepali-date-input";
 import type { LeaveRow } from "@/lib/db/queries/leaves";
 
 const emptyForm = { rollNumber: "", startDate: "", endDate: "", reason: "" };
@@ -29,6 +32,8 @@ export function LeavesManager({
   const [editTarget, setEditTarget] = useState<LeaveRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const filteredLeaves = leaves.filter((leave) => {
     const search = query.trim().toLocaleLowerCase();
@@ -36,6 +41,9 @@ export function LeavesManager({
     return [leave.name, leave.rollNumber, leave.reason ?? "", leave.startDate, leave.endDate]
       .some((value) => value.toLocaleLowerCase().includes(search));
   });
+  const pageCount = Math.max(1, Math.ceil(filteredLeaves.length / pageSize));
+  const visiblePage = Math.min(page, pageCount);
+  const visibleLeaves = filteredLeaves.slice((visiblePage - 1) * pageSize, visiblePage * pageSize);
 
   function closeForm() {
     setFormOpen(false);
@@ -131,7 +139,7 @@ export function LeavesManager({
         </div>
         <button
           onClick={() => setFormOpen(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#9E1B32] px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[#7d1527] focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-[#b82540]"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1E4F91] px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[#12345D] focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:hover:bg-[#477DB9]"
         >
           <CalendarPlus className="h-4 w-4" />
           Record Leave
@@ -150,7 +158,7 @@ export function LeavesManager({
             <input
               type="search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => { setQuery(event.target.value); setPage(1); }}
               placeholder="Search leave records…"
               aria-label="Search leave applications"
               className="h-9 w-full rounded-lg border border-neutral-200 bg-neutral-50 pl-9 pr-9 text-xs text-neutral-800 outline-none transition-colors placeholder:text-neutral-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:bg-neutral-900"
@@ -171,13 +179,13 @@ export function LeavesManager({
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
-              {filteredLeaves.map((l) => (
+              {visibleLeaves.map((l) => (
                 <tr
                   key={l.id}
                   className="group transition-colors hover:bg-neutral-50/90 dark:hover:bg-neutral-800/40"
                 >
                   <td data-label="Student" className="px-4 py-3">
-                    <button type="button" aria-label={`View ${l.name} profile`} onClick={() => openStudent(l.studentId)} className="inline-flex items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32]"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#9E1B32]/8 font-mono text-[10px] font-bold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">{l.rollNumber}</span><span className="font-semibold text-neutral-900 group-hover:text-[#9E1B32] dark:text-neutral-100 dark:group-hover:text-[#e8a3b0]">{l.name}</span><Eye className="ml-1 h-3.5 w-3.5 text-neutral-400" aria-hidden="true" /></button>
+                    <button type="button" aria-label={`View ${l.name} profile`} onClick={() => openStudent(l.studentId)} className="inline-flex items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91]"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1E4F91]/8 font-mono text-[10px] font-bold text-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">{l.rollNumber}</span><span className="min-w-0"><span className="block font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">{l.name}</span><RecordedBy name={l.createdByName} /></span><Eye className="ml-1 h-3.5 w-3.5 text-neutral-400" aria-hidden="true" /></button>
                   </td>
                   <td data-label="Dates" className="px-4 py-3 text-neutral-600 font-mono dark:text-neutral-400">
                     {formatDate(l.startDate)} – {formatDate(l.endDate)}
@@ -216,12 +224,12 @@ export function LeavesManager({
 
         {/* Mobile leave records */}
         <ul className="grid gap-3 md:hidden">
-          {filteredLeaves.map((leave) => (
+          {visibleLeaves.map((leave) => (
             <li key={leave.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-900">
               <div className="flex items-center justify-between gap-3">
-                <button type="button" aria-label={`View ${leave.name} profile`} onClick={() => openStudent(leave.studentId)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32]">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#9E1B32]/8 font-mono text-[10px] font-bold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">{leave.rollNumber}</span>
-                  <span className="min-w-0"><span className="block truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{leave.name}</span><span className="mt-0.5 block text-[10px] font-medium text-neutral-500 dark:text-neutral-400">Intern profile</span></span>
+                <button type="button" aria-label={`View ${leave.name} profile`} onClick={() => openStudent(leave.studentId)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91]">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1E4F91]/8 font-mono text-[10px] font-bold text-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">{leave.rollNumber}</span>
+                  <span className="min-w-0"><span className="block truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{leave.name}</span><RecordedBy name={leave.createdByName} /></span>
                   <Eye className="ml-auto h-4 w-4 shrink-0 text-neutral-400" aria-hidden="true" />
                 </button>
                 <button type="button" aria-label={`Edit leave for ${leave.name}`} title="Edit leave" onClick={() => openEdit(leave)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-blue-950/40"><Pencil className="h-4 w-4" /></button>
@@ -240,6 +248,7 @@ export function LeavesManager({
           ))}
           {filteredLeaves.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">{initialStudentCount === 0 ? "Add interns first before logging leave records." : leaves.length === 0 ? "No leave records for this batch yet." : "No leave applications match this search."}</li>}
         </ul>
+        <Pagination page={visiblePage} pageCount={pageCount} total={filteredLeaves.length} pageSize={pageSize} onPageChange={setPage} />
       </section>
 
       <Modal
@@ -276,22 +285,18 @@ export function LeavesManager({
           </label>
           <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             Start Date
-            <input
+            <NepaliDateInput
               required
-              type="date"
               value={form.startDate}
-              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-              className={inputCls}
+              onChange={(value) => setForm({ ...form, startDate: value })}
             />
           </label>
           <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             End Date
-            <input
+            <NepaliDateInput
               required
-              type="date"
               value={form.endDate}
-              onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-              className={inputCls}
+              onChange={(value) => setForm({ ...form, endDate: value })}
             />
           </label>
           <Modal.Footer>
@@ -305,7 +310,7 @@ export function LeavesManager({
             <button
               type="submit"
               disabled={pending}
-              className="rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d1527] disabled:opacity-60 dark:hover:bg-[#b82540]"
+              className="rounded-lg bg-[#1E4F91] px-4 py-2 text-xs font-semibold text-white hover:bg-[#12345D] disabled:opacity-60 dark:hover:bg-[#477DB9]"
             >
               {pending ? "Saving…" : "Add Leave"}
             </button>
@@ -318,10 +323,10 @@ export function LeavesManager({
         <form onSubmit={submitEdit} className="grid gap-3.5">
           <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">Reason (Optional)<input value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} className={inputCls} /></label>
           <div className="grid grid-cols-2 gap-3">
-            <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">From<input required type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} className={inputCls} /></label>
-            <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">To<input required type="date" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} className={inputCls} /></label>
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">From<NepaliDateInput required value={form.startDate} onChange={(value) => setForm({ ...form, startDate: value })} /></label>
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">To<NepaliDateInput required value={form.endDate} onChange={(value) => setForm({ ...form, endDate: value })} /></label>
           </div>
-          <Modal.Footer><button type="button" onClick={closeEdit} className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 dark:border-neutral-700 dark:text-neutral-300">Cancel</button><button type="submit" disabled={pending} className="rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{pending ? "Saving…" : "Save Changes"}</button></Modal.Footer>
+          <Modal.Footer><button type="button" onClick={closeEdit} className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 dark:border-neutral-700 dark:text-neutral-300">Cancel</button><button type="submit" disabled={pending} className="rounded-lg bg-[#1E4F91] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{pending ? "Saving…" : "Save Changes"}</button></Modal.Footer>
         </form>
       </Modal>
 
@@ -357,4 +362,4 @@ export function LeavesManager({
 }
 
 const inputCls =
-  "mt-1 w-full rounded-lg border border-neutral-300/80 bg-white px-3.5 py-2 text-base sm:text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
+  "mt-1 w-full rounded-lg border border-neutral-300/80 bg-white px-3.5 py-2 text-base sm:text-xs text-neutral-900 outline-none transition-colors focus:border-[#1E4F91] focus:ring-2 focus:ring-[#1E4F91]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";

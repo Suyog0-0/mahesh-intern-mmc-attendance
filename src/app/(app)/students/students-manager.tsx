@@ -7,7 +7,9 @@ import { useStudentDrawer } from "@/components/student-drawer-context";
 import { useToast } from "@/components/toast-provider";
 import type { Student } from "@/lib/db/queries/students";
 import type { Batch } from "@/lib/db/queries/batches";
-import { formatDate } from "@/lib/date";
+import { formatPostingPeriod } from "@/lib/date";
+import { NepaliDateInput } from "@/components/nepali-date-input";
+import { Pagination } from "@/components/pagination";
 
 interface Props {
   batchName: string;
@@ -54,12 +56,8 @@ export function StudentsManager({
     );
   });
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const visibleStudents = filtered.slice((page - 1) * pageSize, page * pageSize);
-
-  function formatPostingPeriod(period: string) {
-    const parts = period.split(/\s+to\s+|\s+–\s+/);
-    return parts.length === 2 ? `${formatDate(parts[0])} – ${formatDate(parts[1])}` : period;
-  }
+  const visiblePage = Math.min(page, pageCount);
+  const visibleStudents = filtered.slice((visiblePage - 1) * pageSize, visiblePage * pageSize);
 
   function openAdd() {
     setEditingId(null);
@@ -206,10 +204,10 @@ export function StudentsManager({
           <div>
             <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-              <Users className="h-4 w-4 text-[#9E1B32] dark:text-[#e8a3b0]" />
+              <Users className="h-4 w-4 text-[#1E4F91] dark:text-[#A9C5EA]" />
               Intern Directory ({students.length})
             </h2>
-            <button type="button" onClick={openAdd} aria-label="Add intern" title="Add intern" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#9E1B32] text-white transition-colors hover:bg-[#7d1527] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] sm:hidden dark:hover:bg-[#b82540]"><Plus className="h-5 w-5" /></button>
+            <button type="button" onClick={openAdd} aria-label="Add intern" title="Add intern" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1E4F91] text-white transition-colors hover:bg-[#12345D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] sm:hidden dark:hover:bg-[#477DB9]"><Plus className="h-5 w-5" /></button>
             </div>
             <p className="mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">Search interns here.</p>
           </div>
@@ -219,13 +217,13 @@ export function StudentsManager({
             <input
               type="search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => { setQuery(e.target.value); setPage(1); }}
               placeholder="Search name or roll number..."
               aria-label="Search students by name or roll number"
-              className="w-full rounded-lg border border-neutral-300/80 bg-white py-2 pl-9 pr-3.5 text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 sm:w-64 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100"
+              className="w-full rounded-lg border border-neutral-300/80 bg-white py-2 pl-9 pr-3.5 text-xs text-neutral-900 outline-none transition-colors focus:border-[#1E4F91] focus:ring-2 focus:ring-[#1E4F91]/20 sm:w-64 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100"
             />
           </div>
-          <button type="button" onClick={openAdd} aria-label="Add intern" title="Add intern" className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#9E1B32] text-white transition-colors hover:bg-[#7d1527] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] sm:inline-flex dark:hover:bg-[#b82540]"><Plus className="h-5 w-5" /></button>
+          <button type="button" onClick={openAdd} aria-label="Add intern" title="Add intern" className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1E4F91] text-white transition-colors hover:bg-[#12345D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] sm:inline-flex dark:hover:bg-[#477DB9]"><Plus className="h-5 w-5" /></button>
           </div>
         </div>
 
@@ -255,21 +253,21 @@ export function StudentsManager({
                   }}
                   title="Click to view full intern history"
                 >
-                  <td data-label="Roll #" className="px-4 py-3.5 font-mono font-bold text-[#9E1B32] group-hover:underline dark:text-[#e8a3b0]">
+                  <td data-label="Roll #" className="px-4 py-3.5 font-mono font-bold text-[#1E4F91] group-hover:underline dark:text-[#A9C5EA]">
                     #{s.rollNumber}
                   </td>
-                  <td data-label="Full Name" className="px-4 py-3.5 font-semibold text-neutral-900 group-hover:text-[#9E1B32] dark:text-neutral-100 dark:group-hover:text-[#e8a3b0]">
+                  <td data-label="Full Name" className="px-4 py-3.5 font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">
                     {s.name}
                   </td>
                   <td data-label="Posting Period" className="px-4 py-3.5 text-neutral-600 dark:text-neutral-400 font-mono">
-                    {s.postingPeriod}
+                    {formatPostingPeriod(s.postingPeriod)}
                   </td>
                   <td data-label="Actions" className="px-4 py-3.5 text-right">
                       <button
                         type="button"
                         aria-label={`View ${s.name} profile`}
                         onClick={(e) => { e.stopPropagation(); openStudent(s.id); }}
-                        className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-[#9E1B32] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-neutral-800 dark:hover:text-[#e8a3b0]"
+                        className="mr-2 inline-flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-[#1E4F91] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:hover:bg-neutral-800 dark:hover:text-[#A9C5EA]"
                       ><Eye className="h-4 w-4" /></button>
                       <button
                         type="button"
@@ -315,11 +313,11 @@ export function StudentsManager({
         <ul className="grid gap-3 md:hidden">
           {visibleStudents.map((student) => (
             <li key={student.id} className="rounded-xl border border-neutral-200/90 bg-white p-3 shadow-sm shadow-neutral-900/[0.025] transition-colors hover:border-neutral-300 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700">
-              <button type="button" aria-label={`View ${student.name} profile`} onClick={() => openStudent(student.id)} className="flex w-full min-w-0 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9E1B32]">
-                <span className="flex h-9 min-w-10 shrink-0 items-center justify-center rounded-lg bg-[#9E1B32]/[0.07] px-2 font-mono text-[11px] font-bold text-[#9E1B32] dark:bg-[#9E1B32]/20 dark:text-[#e8a3b0]">#{student.rollNumber}</span>
+              <button type="button" aria-label={`View ${student.name} profile`} onClick={() => openStudent(student.id)} className="flex w-full min-w-0 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91]">
+                <span className="flex h-9 min-w-10 shrink-0 items-center justify-center rounded-lg bg-[#1E4F91]/[0.07] px-2 font-mono text-[11px] font-bold text-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">#{student.rollNumber}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{student.name}</span>
-                  <span className="mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-md bg-neutral-50 px-2 py-1 text-[10px] font-medium tabular-nums text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"><CalendarDays className="h-3 w-3 shrink-0 text-[#9E1B32] dark:text-[#e8a3b0]" />{formatPostingPeriod(student.postingPeriod)}</span>
+                  <span className="mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-md bg-neutral-50 px-2 py-1 text-[10px] font-medium tabular-nums text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"><CalendarDays className="h-3 w-3 shrink-0 text-[#1E4F91] dark:text-[#A9C5EA]" />{formatPostingPeriod(student.postingPeriod)}</span>
               </span>
               <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300"><Eye className="h-4 w-4" /></span>
               </button>
@@ -337,7 +335,7 @@ export function StudentsManager({
           ))}
           {filtered.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">{students.length === 0 ? "Add interns first to start managing this batch." : "No matching interns found."}</li>}
         </ul>
-        {pageCount > 1 && <nav aria-label="Intern directory pages" className="mt-4 flex items-center justify-between border-t border-neutral-200 pt-3 dark:border-neutral-800"><p className="text-[11px] text-neutral-500">Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}</p><div className="flex gap-2"><button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page === 1} className="h-8 rounded-md border border-neutral-200 px-3 text-xs font-medium disabled:opacity-40 dark:border-neutral-700">Previous</button><span className="inline-flex h-8 items-center px-2 text-xs tabular-nums text-neutral-500">{page} / {pageCount}</span><button type="button" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={page === pageCount} className="h-8 rounded-md border border-neutral-200 px-3 text-xs font-medium disabled:opacity-40 dark:border-neutral-700">Next</button></div></nav>}
+        <Pagination page={visiblePage} pageCount={pageCount} total={filtered.length} pageSize={pageSize} onPageChange={setPage} />
       </section>
 
       {/* Add / Edit Student Modal */}
@@ -397,25 +395,17 @@ export function StudentsManager({
           {/* Validated Date Range for Posting Period */}
           <div className="grid grid-cols-1 gap-3 rounded-xl border border-neutral-200/70 bg-neutral-50/60 p-3 sm:grid-cols-2 dark:border-neutral-800 dark:bg-neutral-800/30">
             <Field label="Posting Start Date">
-              <input
+              <NepaliDateInput
                 required
-                type="date"
                 value={form.postingStartDate}
-                onChange={(e) =>
-                  setForm({ ...form, postingStartDate: e.target.value })
-                }
-                className={inputCls}
+                onChange={(value) => setForm({ ...form, postingStartDate: value })}
               />
             </Field>
             <Field label="Posting End Date">
-              <input
+              <NepaliDateInput
                 required
-                type="date"
                 value={form.postingEndDate}
-                onChange={(e) =>
-                  setForm({ ...form, postingEndDate: e.target.value })
-                }
-                className={inputCls}
+                onChange={(value) => setForm({ ...form, postingEndDate: value })}
               />
             </Field>
           </div>
@@ -440,7 +430,7 @@ export function StudentsManager({
             <button
               type="submit"
               disabled={pending}
-              className="rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d1527] disabled:opacity-60 dark:hover:bg-[#b82540]"
+              className="rounded-lg bg-[#1E4F91] px-4 py-2 text-xs font-semibold text-white hover:bg-[#12345D] disabled:opacity-60 dark:hover:bg-[#477DB9]"
             >
               {pending ? "Saving…" : editingId ? "Save Changes" : "Add Intern"}
             </button>
@@ -481,7 +471,7 @@ export function StudentsManager({
 }
 
 const inputCls =
-  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-base sm:text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
+  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-base sm:text-xs text-neutral-900 outline-none transition-colors focus:border-[#1E4F91] focus:ring-2 focus:ring-[#1E4F91]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
 
 function Field({
   label,
