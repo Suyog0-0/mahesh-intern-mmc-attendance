@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { UserPlus, Search, Pencil, Trash2, Users, Calendar } from "lucide-react";
 import { Card } from "@/components/card";
 import { Modal } from "@/components/modal";
+import { useStudentDrawer } from "@/components/student-drawer-context";
 import type { Student } from "@/lib/db/queries/students";
 
 interface Props {
@@ -10,9 +12,16 @@ interface Props {
   initialStudents: Student[];
 }
 
-const emptyForm = { rollNumber: "", name: "", postingPeriod: "", remarks: "" };
+const emptyForm = {
+  rollNumber: "",
+  name: "",
+  postingStartDate: "",
+  postingEndDate: "",
+  remarks: "",
+};
 
 export function StudentsManager({ batchName, initialStudents }: Props) {
+  const { openStudent } = useStudentDrawer();
   const [students, setStudents] = useState(initialStudents);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -40,10 +49,25 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
 
   function openEdit(s: Student) {
     setEditingId(s.id);
+
+    // Extract start/end dates if stored in "YYYY-MM-DD to YYYY-MM-DD" format
+    let startDate = "";
+    let endDate = "";
+    if (s.postingPeriod.includes(" to ")) {
+      const parts = s.postingPeriod.split(" to ");
+      startDate = parts[0].trim();
+      endDate = parts[1].trim();
+    } else if (s.postingPeriod.includes(" – ")) {
+      const parts = s.postingPeriod.split(" – ");
+      startDate = parts[0].trim();
+      endDate = parts[1].trim();
+    }
+
     setForm({
       rollNumber: s.rollNumber,
       name: s.name,
-      postingPeriod: s.postingPeriod,
+      postingStartDate: startDate,
+      postingEndDate: endDate,
       remarks: s.remarks ?? "",
     });
     setError(null);
@@ -60,10 +84,30 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (pending) return;
+
+    if (!form.postingStartDate || !form.postingEndDate) {
+      setError("Please select both Posting Start Date and End Date.");
+      return;
+    }
+
+    if (form.postingStartDate > form.postingEndDate) {
+      setError("Posting Start Date cannot be after End Date.");
+      return;
+    }
+
     setPending(true);
     setError(null);
+
+    const postingPeriod = `${form.postingStartDate} to ${form.postingEndDate}`;
+
     try {
-      const payload = { ...form, remarks: form.remarks || null };
+      const payload = {
+        rollNumber: form.rollNumber,
+        name: form.name,
+        postingPeriod,
+        remarks: form.remarks || null,
+      };
+
       const res = await fetch(
         editingId ? `/api/students/${editingId}` : "/api/students",
         {
@@ -74,7 +118,7 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
       );
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Could not save student");
+        setError(data.error ?? "Could not save student record");
         return;
       }
       if (editingId) {
@@ -102,57 +146,156 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-3">
+      {/* Editorial Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-neutral-200/80 pb-5 dark:border-neutral-800">
         <div>
-          <h1 className="text-xl font-semibold">Students</h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            {batchName}
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
+            Registered Interns
+          </h1>
+          <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+            Active Batch: <strong className="font-semibold text-neutral-800 dark:text-neutral-200">{batchName}</strong>
           </p>
         </div>
         <button
           onClick={openAdd}
-          className="rounded-lg bg-[#9E1B32] px-4 py-2 text-sm font-semibold text-white hover:bg-[#7d1527] dark:hover:bg-[#b82540]"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white shadow-2xs transition-colors hover:bg-[#7d1527] focus-visible:ring-2 focus-visible:ring-[#9E1B32] dark:hover:bg-[#b82540]"
         >
-          + Add student
+          <UserPlus className="h-4 w-4" />
+          <span>Add Intern</span>
         </button>
       </div>
 
+      {/* Main Intern Table Card */}
       <Card>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold">Roster ({students.length})</h2>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name or roll…"
-            className="w-48 rounded-lg border border-neutral-300 bg-transparent px-3 py-1.5 text-sm dark:border-neutral-700"
-          />
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
+              <Users className="h-4 w-4 text-[#9E1B32] dark:text-[#e8a3b0]" />
+              Intern Directory ({students.length})
+            </h2>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+              Click any intern row to open complete attendance history modal
+            </p>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search name or roll number..."
+              aria-label="Search students by name or roll number"
+              className="w-full sm:w-64 rounded-lg border border-neutral-300/80 bg-white pl-9 pr-3.5 py-1.5 text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100"
+            />
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+
+        {/* Mobile View Cards */}
+        <div className="grid gap-3 sm:hidden">
+          {filtered.map((s) => (
+            <div
+              key={s.id}
+              onClick={() => openStudent(s.id)}
+              className="flex items-center justify-between rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-4 active:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-800/40 dark:active:bg-neutral-800"
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-[#9E1B32] dark:text-[#e8a3b0]">
+                    #{s.rollNumber}
+                  </span>
+                  <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
+                    {s.name}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
+                  <Calendar className="h-3 w-3 text-neutral-400" />
+                  {s.postingPeriod}
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEdit(s);
+                  }}
+                  className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-700"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteTarget(s);
+                  }}
+                  className="rounded-lg p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600 dark:text-neutral-400 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <p className="py-8 text-center text-xs text-neutral-500 dark:text-neutral-400">
+              No matching interns found.
+            </p>
+          )}
+        </div>
+
+        {/* Desktop Editorial Table */}
+        <div className="hidden sm:block overflow-x-auto rounded-xl border border-neutral-200/60 dark:border-neutral-800">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr className="text-xs uppercase text-neutral-500 dark:text-neutral-400">
-                <th className="pb-2 pr-3">Roll</th>
-                <th className="pb-2 pr-3">Name</th>
-                <th className="pb-2 pr-3">Posting</th>
-                <th className="pb-2 pr-3" />
+              <tr className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
+                <th scope="col" className="px-4 py-3">Roll #</th>
+                <th scope="col" className="px-4 py-3">Full Name</th>
+                <th scope="col" className="px-4 py-3">Posting Period (Date Range)</th>
+                <th scope="col" className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-900">
+            <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
               {filtered.map((s) => (
-                <tr key={s.id}>
-                  <td className="py-2 pr-3">{s.rollNumber}</td>
-                  <td className="py-2 pr-3">{s.name}</td>
-                  <td className="py-2 pr-3">{s.postingPeriod}</td>
-                  <td className="py-2 pr-3 text-right">
+                <tr
+                  key={s.id}
+                  onClick={() => openStudent(s.id)}
+                  className="group cursor-pointer transition-colors hover:bg-neutral-50/90 dark:hover:bg-neutral-800/40"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      openStudent(s.id);
+                    }
+                  }}
+                  title="Click to view full intern history"
+                >
+                  <td className="px-4 py-3.5 font-mono font-bold text-[#9E1B32] group-hover:underline dark:text-[#e8a3b0]">
+                    #{s.rollNumber}
+                  </td>
+                  <td className="px-4 py-3.5 font-semibold text-neutral-900 group-hover:text-[#9E1B32] dark:text-neutral-100 dark:group-hover:text-[#e8a3b0]">
+                    {s.name}
+                  </td>
+                  <td className="px-4 py-3.5 text-neutral-600 dark:text-neutral-400 font-mono">
+                    {s.postingPeriod}
+                  </td>
+                  <td className="px-4 py-3.5 text-right">
                     <button
-                      onClick={() => openEdit(s)}
-                      className="mr-3 text-xs font-medium text-neutral-500 hover:text-[#9E1B32] dark:text-neutral-400"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEdit(s);
+                      }}
+                      className="mr-3 font-semibold text-neutral-600 hover:text-[#9E1B32] dark:text-neutral-400 dark:hover:text-[#e8a3b0]"
                     >
                       Edit
                     </button>
                     <button
-                      onClick={() => setDeleteTarget(s)}
-                      className="text-xs font-medium text-neutral-500 hover:text-red-600 dark:text-neutral-400"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget(s);
+                      }}
+                      className="font-semibold text-neutral-500 hover:text-red-600 dark:text-neutral-400 dark:hover:text-red-400"
                     >
                       Delete
                     </button>
@@ -163,9 +306,9 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
                 <tr>
                   <td
                     colSpan={4}
-                    className="py-6 text-center text-neutral-500 dark:text-neutral-400"
+                    className="py-8 text-center text-xs text-neutral-500 dark:text-neutral-400"
                   >
-                    No students found.
+                    No matching interns found.
                   </td>
                 </tr>
               )}
@@ -174,94 +317,120 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
         </div>
       </Card>
 
+      {/* Add / Edit Student Modal */}
       <Modal
         open={formOpen}
         onOpenChange={(open) => (open ? setFormOpen(true) : closeForm())}
-        title={editingId ? "Edit student" : "Add student"}
+        title={editingId ? "Edit Intern Record" : "Add New Intern"}
+        description="Fill out the intern details below with explicit posting period dates."
       >
         {error && (
           <div
             role="alert"
-            className="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-500/10 dark:text-red-400"
+            className="mb-4 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-950/40 dark:text-red-400"
           >
             {error}
           </div>
         )}
-        <form onSubmit={submit} className="grid gap-3">
-          <Field label="Roll number">
+        <form onSubmit={submit} className="grid gap-3.5 py-1">
+          <Field label="Roll Number">
             <input
               required
               value={form.rollNumber}
               onChange={(e) => setForm({ ...form, rollNumber: e.target.value })}
+              placeholder="e.g. 101"
               className={inputCls}
             />
           </Field>
-          <Field label="Name">
+          <Field label="Full Name">
             <input
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="e.g. Dr. Mahesh Sharma"
               className={inputCls}
             />
           </Field>
-          <Field label="Posting period">
-            <input
-              required
-              value={form.postingPeriod}
-              onChange={(e) =>
-                setForm({ ...form, postingPeriod: e.target.value })
-              }
-              className={inputCls}
-            />
-          </Field>
-          <Field label="Remarks (optional)">
+
+          {/* Validated Date Range for Posting Period */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Posting Start Date">
+              <input
+                required
+                type="date"
+                value={form.postingStartDate}
+                onChange={(e) =>
+                  setForm({ ...form, postingStartDate: e.target.value })
+                }
+                className={inputCls}
+              />
+            </Field>
+            <Field label="Posting End Date">
+              <input
+                required
+                type="date"
+                value={form.postingEndDate}
+                onChange={(e) =>
+                  setForm({ ...form, postingEndDate: e.target.value })
+                }
+                className={inputCls}
+              />
+            </Field>
+          </div>
+
+          <Field label="Remarks / Notes (Optional)">
             <input
               value={form.remarks}
               onChange={(e) => setForm({ ...form, remarks: e.target.value })}
+              placeholder="e.g. General Surgery rotation"
               className={inputCls}
             />
           </Field>
+
           <Modal.Footer>
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-[#9E1B32] px-4 py-2 text-sm font-semibold text-white hover:bg-[#7d1527] disabled:opacity-60 dark:hover:bg-[#b82540]"
-            >
-              {pending ? "Saving…" : editingId ? "Save changes" : "Add student"}
-            </button>
             <button
               type="button"
               onClick={closeForm}
-              className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium dark:border-neutral-700"
+              className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
               Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d1527] disabled:opacity-60 dark:hover:bg-[#b82540]"
+            >
+              {pending ? "Saving…" : editingId ? "Save Changes" : "Add Intern"}
             </button>
           </Modal.Footer>
         </form>
       </Modal>
 
+      {/* Delete Confirmation Modal */}
       <Modal
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete student?"
+        title="Delete Intern Record?"
         description={
           deleteTarget
-            ? `This removes ${deleteTarget.name} (${deleteTarget.rollNumber}) and all of their attendance records and leaves. This can't be undone.`
+            ? `This permanently removes ${deleteTarget.name} (Roll #${deleteTarget.rollNumber}) and all associated attendance records and leave logs. This action cannot be undone.`
             : undefined
         }
       >
         <Modal.Footer>
           <button
-            onClick={confirmDelete}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
-          >
-            Delete
-          </button>
-          <button
+            type="button"
             onClick={() => setDeleteTarget(null)}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium dark:border-neutral-700"
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
           >
             Cancel
+          </button>
+          <button
+            type="button"
+            onClick={confirmDelete}
+            className="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700"
+          >
+            Delete Permanently
           </button>
         </Modal.Footer>
       </Modal>
@@ -270,7 +439,7 @@ export function StudentsManager({ batchName, initialStudents }: Props) {
 }
 
 const inputCls =
-  "mt-1 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700";
+  "mt-1.5 w-full rounded-lg border border-neutral-300/80 bg-white px-3 py-2 text-xs text-neutral-900 outline-none transition-colors focus:border-[#9E1B32] focus:ring-2 focus:ring-[#9E1B32]/20 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100";
 
 function Field({
   label,
@@ -280,7 +449,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block text-sm font-medium">
+    <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
       {label}
       {children}
     </label>
