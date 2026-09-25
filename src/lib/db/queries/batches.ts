@@ -1,26 +1,27 @@
 import { count, desc, eq } from "drizzle-orm";
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { batches, students } from "@/drizzle/schema";
 
 export type Batch = typeof batches.$inferSelect;
 
-export async function listBatches(): Promise<Batch[]> {
+export const listBatches = cache(async (): Promise<Batch[]> => {
   return db.select().from(batches).orderBy(desc(batches.startDate));
-}
+});
 
-export async function getBatchById(id: number): Promise<Batch | undefined> {
+export const getBatchById = cache(async (id: number): Promise<Batch | undefined> => {
   const [row] = await db.select().from(batches).where(eq(batches.id, id)).limit(1);
   return row;
-}
+});
 
-export async function getCurrentBatch(): Promise<Batch | undefined> {
+export const getCurrentBatch = cache(async (): Promise<Batch | undefined> => {
   const [row] = await db
     .select()
     .from(batches)
     .where(eq(batches.isCurrent, true))
     .limit(1);
   return row;
-}
+});
 
 export async function countStudentsByBatch(): Promise<Map<number, number>> {
   const rows = await db

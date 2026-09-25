@@ -1,13 +1,14 @@
 import { and, asc, eq, ilike, or } from "drizzle-orm";
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { attendanceRecords, leaves, students } from "@/drizzle/schema";
 
 export type Student = typeof students.$inferSelect;
 
-export async function listStudents(
+export const listStudents = cache(async (
   batchId: number,
   search?: string,
-): Promise<Student[]> {
+): Promise<Student[]> => {
   const term = search?.trim();
   const escaped = term?.replace(/[\\%_]/g, (c) => `\\${c}`);
   return db
@@ -25,12 +26,12 @@ export async function listStudents(
       ),
     )
     .orderBy(asc(students.rollNumber));
-}
+});
 
-export async function getStudentById(id: number): Promise<Student | undefined> {
+export const getStudentById = cache(async (id: number): Promise<Student | undefined> => {
   const [row] = await db.select().from(students).where(eq(students.id, id)).limit(1);
   return row;
-}
+});
 
 export async function findStudentByRoll(
   batchId: number,
