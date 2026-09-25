@@ -5,7 +5,16 @@ import { Card } from "@/components/card";
 import { Modal } from "@/components/modal";
 import { formatDate } from "@/lib/date";
 import type { Batch } from "@/lib/db/queries/batches";
-import { Plus, FolderKanban, Calendar, Users, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  Plus,
+  FolderKanban,
+  Calendar,
+  Users,
+  CheckCircle2,
+  Loader2,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 
 type BatchRow = Batch & { studentCount: number };
 const emptyForm = { name: "", startDate: "", endDate: "", isCurrent: false };
@@ -22,10 +31,42 @@ export function BatchesManager({
   const [switching, setSwitching] = useState<number | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
+  // Edit state
+  const [editTarget, setEditTarget] = useState<BatchRow | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", startDate: "", endDate: "" });
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editPending, setEditPending] = useState(false);
+
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<BatchRow | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   function closeForm() {
     setFormOpen(false);
     setForm(emptyForm);
     setError(null);
+  }
+
+  function openEdit(b: BatchRow) {
+    setEditTarget(b);
+    setEditForm({ name: b.name, startDate: b.startDate, endDate: b.endDate });
+    setEditError(null);
+  }
+
+  function closeEdit() {
+    setEditTarget(null);
+    setEditError(null);
+  }
+
+  function openDelete(b: BatchRow) {
+    setDeleteTarget(b);
+    setDeleteError(null);
+  }
+
+  function closeDelete() {
+    setDeleteTarget(null);
+    setDeleteError(null);
   }
 
   async function submit(e: React.FormEvent) {
@@ -55,6 +96,57 @@ export function BatchesManager({
       setError("Network error — try again.");
     } finally {
       setPending(false);
+    }
+  }
+
+  async function submitEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTarget || editPending) return;
+    setEditPending(true);
+    setEditError(null);
+    try {
+      const res = await fetch(`/api/batches/${editTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditError(data.error ?? "Could not update batch");
+        return;
+      }
+      setBatches((prev) =>
+        prev.map((b) =>
+          b.id === editTarget.id ? { ...b, ...data.batch } : b,
+        ),
+      );
+      closeEdit();
+    } catch {
+      setEditError("Network error — try again.");
+    } finally {
+      setEditPending(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget || deletePending) return;
+    setDeletePending(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/batches/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDeleteError(data.error ?? "Could not delete batch");
+        return;
+      }
+      setBatches((prev) => prev.filter((b) => b.id !== deleteTarget.id));
+      closeDelete();
+    } catch {
+      setDeleteError("Network error — try again.");
+    } finally {
+      setDeletePending(false);
     }
   }
 
@@ -109,36 +201,52 @@ export function BatchesManager({
               className="rounded-xl border border-neutral-200/80 bg-white p-4 shadow-2xs dark:border-neutral-800 dark:bg-neutral-900"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm text-neutral-900 dark:text-neutral-100">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-bold text-sm text-neutral-900 dark:text-neutral-100 truncate">
                     {b.name}
                   </span>
                   {b.isCurrent && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
                       <CheckCircle2 className="h-3 w-3" />
                       Active
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
+                <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium shrink-0">
                   <Users className="h-3.5 w-3.5" />
-                  {b.studentCount} interns
+                  {b.studentCount}
                 </div>
               </div>
 
-              <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-3 dark:border-neutral-800 text-xs">
-                <span className="text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5" />
-                  {formatDate(b.startDate)} – {formatDate(b.endDate)}
-                </span>
+              <div className="mt-2 flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
+                <Calendar className="h-3.5 w-3.5" />
+                {formatDate(b.startDate)} – {formatDate(b.endDate)}
+              </div>
 
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
                 {!b.isCurrent && (
                   <button
                     onClick={() => makeCurrent(b.id)}
                     disabled={switching === b.id}
-                    className="font-semibold text-[#9E1B32] hover:underline disabled:opacity-50 dark:text-[#e8a3b0]"
+                    className="text-xs font-semibold text-emerald-600 hover:underline disabled:opacity-50 dark:text-emerald-400"
                   >
                     {switching === b.id ? "Updating..." : "Set Current"}
+                  </button>
+                )}
+                <button
+                  onClick={() => openEdit(b)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </button>
+                {!b.isCurrent && (
+                  <button
+                    onClick={() => openDelete(b)}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-auto"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
                   </button>
                 )}
               </div>
@@ -153,44 +261,65 @@ export function BatchesManager({
               <tr className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
                 <th scope="col" className="px-4 py-3">Batch Name</th>
                 <th scope="col" className="px-4 py-3">Date Range</th>
-                <th scope="col" className="px-4 py-3">Enrolled Interns</th>
-                <th scope="col" className="px-4 py-3 text-right">Status / Action</th>
+                <th scope="col" className="px-4 py-3">Interns</th>
+                <th scope="col" className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
               {batches.map((b) => (
                 <tr key={b.id} className="transition-colors hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40">
-                  <td className="px-4 py-3.5 font-bold text-neutral-900 dark:text-neutral-100">
-                    {b.name}
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-neutral-900 dark:text-neutral-100">{b.name}</span>
+                      {b.isCurrent && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Active
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3.5 text-neutral-600 dark:text-neutral-400 font-medium">
                     {formatDate(b.startDate)} – {formatDate(b.endDate)}
                   </td>
                   <td className="px-4 py-3.5 font-semibold text-neutral-800 dark:text-neutral-200">
-                    {b.studentCount} interns
+                    {b.studentCount}
                   </td>
-                  <td className="px-4 py-3.5 text-right">
-                    {b.isCurrent ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Current Active
-                      </span>
-                    ) : (
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center justify-end gap-2">
+                      {!b.isCurrent && (
+                        <button
+                          onClick={() => makeCurrent(b.id)}
+                          disabled={switching === b.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                        >
+                          {switching === b.id ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#9E1B32]" />
+                              Updating…
+                            </>
+                          ) : (
+                            "Make Current"
+                          )}
+                        </button>
+                      )}
                       <button
-                        onClick={() => makeCurrent(b.id)}
-                        disabled={switching === b.id}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                        onClick={() => openEdit(b)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
                       >
-                        {switching === b.id ? (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-[#9E1B32]" />
-                            Updating…
-                          </>
-                        ) : (
-                          "Make Current"
-                        )}
+                        <Pencil className="h-3.5 w-3.5" />
+                        Edit
                       </button>
-                    )}
+                      {!b.isCurrent && (
+                        <button
+                          onClick={() => openDelete(b)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/30"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -199,6 +328,7 @@ export function BatchesManager({
         </div>
       </Card>
 
+      {/* Create Batch Modal */}
       <Modal
         open={formOpen}
         onOpenChange={(open) => (open ? setFormOpen(true) : closeForm())}
@@ -280,6 +410,127 @@ export function BatchesManager({
             </button>
           </Modal.Footer>
         </form>
+      </Modal>
+
+      {/* Edit Batch Modal */}
+      <Modal
+        open={!!editTarget}
+        onOpenChange={(open) => !open && closeEdit()}
+        title="Edit Batch"
+        description={editTarget ? `Editing: ${editTarget.name}` : undefined}
+      >
+        {editError && (
+          <div
+            role="alert"
+            className="mb-3 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-950/40 dark:text-red-400"
+          >
+            {editError}
+          </div>
+        )}
+        <form onSubmit={submitEdit} className="grid gap-4 pt-1">
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+            Batch Name
+            <input
+              required
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              className={inputCls}
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+              Start Date
+              <input
+                required
+                type="date"
+                value={editForm.startDate}
+                onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                className={inputCls}
+              />
+            </label>
+            <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+              End Date
+              <input
+                required
+                type="date"
+                value={editForm.endDate}
+                onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                className={inputCls}
+              />
+            </label>
+          </div>
+          <Modal.Footer>
+            <button
+              type="button"
+              onClick={closeEdit}
+              className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={editPending}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#9E1B32] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d1527] disabled:opacity-60 dark:hover:bg-[#b82540]"
+            >
+              {editPending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </button>
+          </Modal.Footer>
+        </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && closeDelete()}
+        title="Delete Batch?"
+        description={
+          deleteTarget
+            ? `Are you sure you want to permanently delete "${deleteTarget.name}"? This will also remove all ${deleteTarget.studentCount} intern record(s) and their attendance history.`
+            : undefined
+        }
+      >
+        {deleteError && (
+          <div
+            role="alert"
+            className="mb-3 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-950/40 dark:text-red-400"
+          >
+            {deleteError}
+          </div>
+        )}
+        <Modal.Footer>
+          <button
+            type="button"
+            onClick={closeDelete}
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={deletePending}
+            onClick={confirmDelete}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+          >
+            {deletePending ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Deleting…
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete Batch
+              </>
+            )}
+          </button>
+        </Modal.Footer>
       </Modal>
     </div>
   );
