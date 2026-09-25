@@ -1,15 +1,17 @@
 import { eachDate, maxDate, minDate } from "@/lib/date";
+import type { AttendanceStatus } from "./types";
 
 // Pure attendance math. This is the ONLY place totals are calculated, so the
 // dashboard, calendar, reports, CSV export and student pages always agree.
 //
-// Model: attendance_records hold absences only (status absent | late | leave).
-// No record for a student+date means present.
+// Attendance rows represent exceptions or an explicit department presence.
+// No row for a student+date means ordinary present.
 //
 // Definitions (documented in .claude/docs/architecture.md):
 //  - Effective status of a student on a date: the attendance record if one
 //    exists; otherwise "leave" if a leaves-table range covers that date;
-//    otherwise present. A record always wins over a leave range.
+//    otherwise present. A record always wins over a leave range; explicit
+//    `present` rows are attended and retain their department for the log.
 //  - absenceCount  = number of `absent` records
 //  - lateCount     = number of `late` records
 //  - leaveDays     = number of days with effective status `leave`
@@ -18,7 +20,7 @@ import { eachDate, maxDate, minDate } from "@/lib/date";
 //  - present (per day) = totalInterns - absent - leave (late counts as present)
 // Calendar days are counted; there is no working-day/weekend calendar yet.
 
-export type AttendanceStatus = "absent" | "late" | "leave";
+export type { AttendanceStatus } from "./types";
 
 export interface StudentInfo {
   id: number;
@@ -120,7 +122,7 @@ export function summarize(input: {
         } else if (status === "late") {
           lateCount++;
           if (day) day.late++;
-        } else {
+        } else if (status === "leave") {
           leaveDays++;
           if (day) day.leave++;
         }

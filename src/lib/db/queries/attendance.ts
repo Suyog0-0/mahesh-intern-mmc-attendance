@@ -1,29 +1,32 @@
-import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, lte } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { attendanceRecords, students } from "@/drizzle/schema";
+import { attendanceRecords, students, users } from "@/drizzle/schema";
+import type { AttendanceDepartment, AttendanceStatus } from "@/lib/attendance/types";
 
 export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
-export type AttendanceStatus = AttendanceRecord["status"];
-
 export interface DayRecordRow {
   studentId: number;
   rollNumber: string;
   name: string;
   status: AttendanceStatus;
+  department: AttendanceDepartment | null;
   remarks: string | null;
+  markedByName: string | null;
 }
 
 export interface RangeRecordRow {
   studentId: number;
   date: string;
   status: AttendanceStatus;
+  department: AttendanceDepartment | null;
 }
 
-/** Records are absences: one row per student per date; no row = present. */
+/** One row per student/date exception or department presence; no row = present. */
 export async function upsertAttendance(input: {
   studentId: number;
   date: string;
   status: AttendanceStatus;
+  department?: AttendanceDepartment | null;
   remarks: string | null;
   markedBy: number;
 }): Promise<AttendanceRecord> {
@@ -34,6 +37,7 @@ export async function upsertAttendance(input: {
       target: [attendanceRecords.studentId, attendanceRecords.date],
       set: {
         status: input.status,
+        department: input.department ?? null,
         remarks: input.remarks,
         markedBy: input.markedBy,
         updatedAt: new Date(),
@@ -81,10 +85,13 @@ export async function listRecordsForDate(
       rollNumber: students.rollNumber,
       name: students.name,
       status: attendanceRecords.status,
+      department: attendanceRecords.department,
       remarks: attendanceRecords.remarks,
+      markedByName: users.name,
     })
     .from(attendanceRecords)
     .innerJoin(students, eq(attendanceRecords.studentId, students.id))
+    .leftJoin(users, eq(attendanceRecords.markedBy, users.id))
     .where(and(eq(students.batchId, batchId), eq(attendanceRecords.date, date)))
     .orderBy(asc(students.rollNumber));
 }
@@ -99,6 +106,7 @@ export async function listRecordsInRange(
       studentId: attendanceRecords.studentId,
       date: attendanceRecords.date,
       status: attendanceRecords.status,
+      department: attendanceRecords.department,
     })
     .from(attendanceRecords)
     .innerJoin(students, eq(attendanceRecords.studentId, students.id))
@@ -113,10 +121,11 @@ export async function listRecordsInRange(
 
 export async function listStudentHistory(
   studentId: number,
-): Promise<AttendanceRecord[]> {
+): Promise<Array<AttendanceRecord & { markedByName: string | null }>> {
   return db
-    .select()
+    .select({ ...getTableColumns(attendanceRecords), markedByName: users.name })
     .from(attendanceRecords)
+    .leftJoin(users, eq(attendanceRecords.markedBy, users.id))
     .where(eq(attendanceRecords.studentId, studentId))
     .orderBy(desc(attendanceRecords.date));
 }

@@ -7,8 +7,8 @@ import {
   listStudentHistory,
   upsertAttendance,
   type AttendanceRecord,
-  type AttendanceStatus,
 } from "@/lib/db/queries/attendance";
+import type { AttendanceDepartment, AttendanceStatus } from "./types";
 import {
   getActiveLeave,
   listLeavesOverlapping,
@@ -114,7 +114,9 @@ export interface DayListRow {
   rollNumber: string;
   name: string;
   status: AttendanceStatus;
+  department: AttendanceDepartment | null;
   remarks: string | null;
+  markedByName: string | null;
   /** "record" = marked attendance; "leave" = covered by an approved leave range */
   source: "record" | "leave";
 }
@@ -137,7 +139,9 @@ export async function getAttendanceDay(
         rollNumber: l.rollNumber,
         name: l.name,
         status: "leave" as const,
+        department: null,
         remarks: l.reason,
+        markedByName: l.createdByName,
         source: "leave" as const,
       })),
   ];
@@ -202,6 +206,7 @@ export async function markAttendance(input: {
   studentId: number;
   date: string;
   status: AttendanceStatus;
+  department?: AttendanceDepartment | null;
   remarks: string | null;
   userId: number;
 }): Promise<Result<AttendanceRecord>> {
@@ -211,6 +216,7 @@ export async function markAttendance(input: {
     studentId: input.studentId,
     date: input.date,
     status: input.status,
+    department: input.department,
     remarks: input.remarks,
     markedBy: input.userId,
   });
