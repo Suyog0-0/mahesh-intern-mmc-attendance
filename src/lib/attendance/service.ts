@@ -180,6 +180,17 @@ async function resolveCurrentStudent(
   return ok(student);
 }
 
+/** For clearing: find the student's batch directly; no need to match current batch. */
+async function resolveStudentForDate(
+  studentId: number,
+  date: string,
+): Promise<Result<Student>> {
+  if (date > todayISO()) return fail(400, "Cannot clear attendance for a future date");
+  const student = await getStudentById(studentId);
+  if (!student) return fail(404, "Student not found");
+  return ok(student);
+}
+
 export async function markAttendance(input: {
   studentId: number;
   date: string;
@@ -204,7 +215,7 @@ export async function clearAttendance(
   studentId: number,
   date: string,
 ): Promise<Result<{ removed: boolean }>> {
-  const student = await resolveCurrentStudent(studentId, date);
+  const student = await resolveStudentForDate(studentId, date);
   if (!student.ok) return student;
   return ok({ removed: await deleteAttendance(studentId, date) });
 }
