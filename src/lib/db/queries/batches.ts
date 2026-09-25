@@ -70,3 +70,11 @@ export async function setCurrentBatch(id: number): Promise<Batch> {
   ]);
   return updated[0];
 }
+
+export async function deleteBatch(id: number): Promise<boolean> {
+  const rows = await db
+    .delete(batches)
+    .where(eq(batches.id, id))
+    .returning({ id: batches.id });
+  return rows.length > 0;
+}
