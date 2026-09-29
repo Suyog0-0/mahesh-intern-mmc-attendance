@@ -10,6 +10,10 @@ import { Pagination } from "@/components/pagination";
 import { RecordedBy } from "@/components/recorded-by";
 import { NepaliDateInput } from "@/components/nepali-date-input";
 import type { LeaveRow } from "@/lib/db/queries/leaves";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { formatPersonName } from "@/lib/utils";
 
 const emptyForm = { rollNumber: "", startDate: "", endDate: "", reason: "" };
 
@@ -33,7 +37,7 @@ export function LeavesManager({
   const [formOpen, setFormOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 20;
 
   const filteredLeaves = leaves.filter((leave) => {
     const search = query.trim().toLocaleLowerCase();
@@ -155,7 +159,7 @@ export function LeavesManager({
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">Search interns, roll numbers, reasons, or dates.</p>
           <div className="relative mt-3 w-full sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" aria-hidden="true" />
-            <input
+            <Input
               type="search"
               value={query}
               onChange={(event) => { setQuery(event.target.value); setPage(1); }}
@@ -168,30 +172,34 @@ export function LeavesManager({
         </div>
 
         {/* Desktop table */}
-        <div className="hidden overflow-x-auto rounded-lg border border-neutral-200/60 dark:border-neutral-800 md:block">
-          <table className="w-full text-left text-xs min-w-[600px]">
-            <thead>
-              <tr className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
-                <th scope="col" className="px-4 py-3">Student</th>
-                <th scope="col" className="px-4 py-3">Dates</th>
-                <th scope="col" className="px-4 py-3">Reason</th>
-                <th scope="col" className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
+        <div className="hidden overflow-x-auto rounded-lg border border-neutral-200/60 dark:border-neutral-800 sm:block">
+          <Table className="w-full text-left text-xs min-w-[600px]">
+            <TableHeader>
+              <TableRow className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
+                <TableHead scope="col" className="px-4 py-3">Student</TableHead>
+                <TableHead scope="col" className="px-4 py-3">Dates</TableHead>
+                <TableHead scope="col" className="px-4 py-3">Reason</TableHead>
+                <TableHead scope="col" className="px-4 py-3 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
               {visibleLeaves.map((l) => (
-                <tr
+                <TableRow
                   key={l.id}
                   className="group transition-colors hover:bg-neutral-50/90 dark:hover:bg-neutral-800/40"
                 >
-                  <td data-label="Student" className="px-4 py-3">
-                    <button type="button" aria-label={`View ${l.name} profile`} onClick={() => openStudent(l.studentId)} className="inline-flex items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91]"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1E4F91]/8 font-mono text-[10px] font-bold text-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">{l.rollNumber}</span><span className="min-w-0"><span className="block font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">{l.name}</span><RecordedBy name={l.createdByName} /></span><Eye className="ml-1 h-3.5 w-3.5 text-neutral-400" aria-hidden="true" /></button>
-                  </td>
-                  <td data-label="Dates" className="px-4 py-3 text-neutral-600 font-mono dark:text-neutral-400">
+                  <TableCell data-label="Student" className="px-4 py-3">
+                    <div className="inline-flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1E4F91]/8 font-mono text-[10px] font-bold text-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">{l.rollNumber}</span>
+                      <span className="min-w-0"><span className="block font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">{formatPersonName(l.name)}</span><RecordedBy name={l.createdByName} /></span>
+                    </div>
+                  </TableCell>
+                  <TableCell data-label="Dates" className="px-4 py-3 text-neutral-600 font-mono dark:text-neutral-400">
                     {formatDate(l.startDate)} – {formatDate(l.endDate)}
-                  </td>
-                  <td data-label="Reason" className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{l.reason ?? "—"}</td>
-                  <td data-label="Actions" className="px-4 py-3 text-right">
+                  </TableCell>
+                  <TableCell data-label="Reason" className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{l.reason ?? "—"}</TableCell>
+                  <TableCell data-label="Actions" className="px-4 py-3 text-right">
+                    <button type="button" title="View intern profile" aria-label={`View ${l.name} profile`} onClick={() => openStudent(l.studentId)} className="mr-1 inline-flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-[#1E4F91] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-[#A9C5EA]"><Eye className="h-4 w-4" /></button>
                     <button type="button" title="Edit leave record" aria-label={`Edit leave for ${l.name}`} onClick={() => openEdit(l)} className="mr-1 inline-flex h-9 w-9 items-center justify-center rounded-lg text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-blue-950/40"><Pencil className="h-4 w-4" /></button>
                     <button
                       type="button"
@@ -205,31 +213,31 @@ export function LeavesManager({
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               {leaves.length === 0 && (
-                <tr>
-                  <td
+                <TableRow>
+                  <TableCell
                     colSpan={4}
                     className="py-8 text-center text-xs text-neutral-500 dark:text-neutral-400"
                   >
                     {initialStudentCount === 0 ? "Add interns first before logging leave records." : leaves.length === 0 ? "No leave records logged yet." : "No leave applications match this search."}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Mobile leave records */}
-        <ul className="grid gap-3 md:hidden">
+        <ul className="grid gap-3 sm:hidden">
           {visibleLeaves.map((leave) => (
             <li key={leave.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-900">
               <div className="flex items-center justify-between gap-3">
                 <button type="button" aria-label={`View ${leave.name} profile`} onClick={() => openStudent(leave.studentId)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91]">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1E4F91]/8 font-mono text-[10px] font-bold text-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">{leave.rollNumber}</span>
-                  <span className="min-w-0"><span className="block truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{leave.name}</span><RecordedBy name={leave.createdByName} /></span>
+                  <span className="min-w-0"><span className="block truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{formatPersonName(leave.name)}</span><RecordedBy name={leave.createdByName} /></span>
                   <Eye className="ml-auto h-4 w-4 shrink-0 text-neutral-400" aria-hidden="true" />
                 </button>
                 <button type="button" aria-label={`Edit leave for ${leave.name}`} title="Edit leave" onClick={() => openEdit(leave)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:text-blue-300 dark:hover:bg-blue-950/40"><Pencil className="h-4 w-4" /></button>
@@ -268,7 +276,7 @@ export function LeavesManager({
         <form onSubmit={submit} className="grid gap-3.5">
           <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             Roll Number
-            <input
+            <Input
               required
               value={form.rollNumber}
               onChange={(e) => setForm({ ...form, rollNumber: e.target.value })}
@@ -277,24 +285,26 @@ export function LeavesManager({
           </label>
           <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             Reason (Optional)
-            <input
+            <Input
               value={form.reason}
               onChange={(e) => setForm({ ...form, reason: e.target.value })}
               className={inputCls}
             />
           </label>
-          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+          <label className="block min-w-0 text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             Start Date
             <NepaliDateInput
               required
+              className="w-full"
               value={form.startDate}
               onChange={(value) => setForm({ ...form, startDate: value })}
             />
           </label>
-          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+          <label className="block min-w-0 text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             End Date
             <NepaliDateInput
               required
+              className="w-full"
               value={form.endDate}
               onChange={(value) => setForm({ ...form, endDate: value })}
             />
@@ -318,45 +328,33 @@ export function LeavesManager({
         </form>
       </Modal>
 
-      <Modal open={!!editTarget} onOpenChange={(open) => !open && closeEdit()} title="Edit Leave Record" description={editTarget ? `${editTarget.name} · Roll #${editTarget.rollNumber}` : undefined}>
+      <Modal open={!!editTarget} onOpenChange={(open) => !open && closeEdit()} title="Edit Leave Record" description={editTarget ? `${editTarget.name} · Roll #${editTarget.rollNumber}` : undefined} size="wide">
         {error && <div role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-700 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
         <form onSubmit={submitEdit} className="grid gap-3.5">
-          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">Reason (Optional)<input value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} className={inputCls} /></label>
-          <div className="grid grid-cols-2 gap-3">
-          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">From<NepaliDateInput required value={form.startDate} onChange={(value) => setForm({ ...form, startDate: value })} /></label>
-          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">To<NepaliDateInput required value={form.endDate} onChange={(value) => setForm({ ...form, endDate: value })} /></label>
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">Reason (Optional)<Input value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} className={inputCls} /></label>
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+          <label className="block min-w-0 text-xs font-semibold text-neutral-700 dark:text-neutral-300">From<NepaliDateInput required className="w-full min-w-0" value={form.startDate} onChange={(value) => setForm({ ...form, startDate: value })} /></label>
+          <label className="block min-w-0 text-xs font-semibold text-neutral-700 dark:text-neutral-300">To<NepaliDateInput required className="w-full min-w-0" value={form.endDate} onChange={(value) => setForm({ ...form, endDate: value })} /></label>
           </div>
           <Modal.Footer><button type="button" onClick={closeEdit} className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 dark:border-neutral-700 dark:text-neutral-300">Cancel</button><button type="submit" disabled={pending} className="rounded-lg bg-[#1E4F91] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">{pending ? "Saving…" : "Save Changes"}</button></Modal.Footer>
         </form>
       </Modal>
 
-      <Modal
+      <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete Leave Record?"
-        description={
-          deleteTarget
-            ? `This removes the leave for ${deleteTarget.name} (Roll #${deleteTarget.rollNumber}), ${formatDate(deleteTarget.startDate)} – ${formatDate(deleteTarget.endDate)}.`
-            : undefined
-        }
       >
-        <Modal.Footer>
-          <button
-            type="button"
-            onClick={() => setDeleteTarget(null)}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={confirmDelete}
-            className="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700"
-          >
-            Delete Permanently
-          </button>
-        </Modal.Footer>
-      </Modal>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Leave Record?</AlertDialogTitle>
+            <AlertDialogDescription>{deleteTarget ? `This removes the leave for ${deleteTarget.name} (Roll #${deleteTarget.rollNumber}), ${formatDate(deleteTarget.startDate)} – ${formatDate(deleteTarget.endDate)}.` : ""}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Delete Permanently</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
