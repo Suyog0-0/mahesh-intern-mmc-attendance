@@ -6,6 +6,11 @@ import { useToast } from "@/components/toast-provider";
 import { formatDate, todayISO } from "@/lib/date";
 import type { Batch } from "@/lib/db/queries/batches";
 import { Pagination } from "@/components/pagination";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NepaliDateInput } from "@/components/nepali-date-input";
 import {
   Plus,
@@ -35,7 +40,7 @@ export function BatchesManager({
   const [formOpen, setFormOpen] = useState(false);
   const [viewTarget, setViewTarget] = useState<BatchRow | null>(null);
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 20;
   const pageCount = Math.max(1, Math.ceil(batches.length / pageSize));
   const visiblePage = Math.min(page, pageCount);
   const visibleBatches = batches.slice((visiblePage - 1) * pageSize, visiblePage * pageSize);
@@ -239,20 +244,20 @@ export function BatchesManager({
         </div>
 
         {/* Desktop table */}
-        <div className="hidden overflow-x-auto rounded-lg border border-neutral-200/60 dark:border-neutral-800 md:block">
-          <table className="w-full text-left text-xs min-w-[600px]">
-            <thead>
-              <tr className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
-                <th scope="col" className="px-4 py-3">Batch Name</th>
-                <th scope="col" className="px-4 py-3">Date Range</th>
-                <th scope="col" className="px-4 py-3">Interns</th>
-                <th scope="col" className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
+        <div className="hidden overflow-x-auto rounded-lg border border-neutral-200/60 dark:border-neutral-800 sm:block">
+          <Table className="w-full text-left text-xs min-w-[600px]">
+            <TableHeader>
+              <TableRow className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
+                <TableHead scope="col" className="px-4 py-3">Batch Name</TableHead>
+                <TableHead scope="col" className="px-4 py-3">Date Range</TableHead>
+                <TableHead scope="col" className="px-4 py-3">Interns</TableHead>
+                <TableHead scope="col" className="px-4 py-3 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
               {visibleBatches.map((b) => (
-                <tr key={b.id} className="transition-colors hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40">
-                  <td data-label="Batch" className="px-4 py-3.5">
+                <TableRow key={b.id} className="transition-colors hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40">
+                  <TableCell data-label="Batch" className="px-4 py-3.5">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-neutral-900 dark:text-neutral-100">{b.name}</span>
                       {b.isCurrent && (
@@ -262,14 +267,14 @@ export function BatchesManager({
                         </span>
                       )}
                     </div>
-                  </td>
-                  <td data-label="Date Range" className="px-4 py-3.5 text-neutral-600 dark:text-neutral-400 font-medium">
+                  </TableCell>
+                  <TableCell data-label="Date Range" className="px-4 py-3.5 text-neutral-600 dark:text-neutral-400 font-medium">
                     {formatDate(b.startDate)} – {formatDate(b.endDate)}
-                  </td>
-                  <td data-label="Interns" className="px-4 py-3.5 font-semibold text-neutral-800 dark:text-neutral-200">
+                  </TableCell>
+                  <TableCell data-label="Interns" className="px-4 py-3.5 font-semibold text-neutral-800 dark:text-neutral-200">
                     {b.studentCount}
-                  </td>
-                  <td data-label="Actions" className="px-4 py-3.5 text-right">
+                  </TableCell>
+                  <TableCell data-label="Actions" className="px-4 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button type="button" onClick={() => setViewTarget(b)} title="View batch" aria-label={`View ${b.name}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"><Eye className="h-4 w-4" /></button>
                       {!b.isCurrent && (
@@ -309,22 +314,22 @@ export function BatchesManager({
                         </button>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               {batches.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-neutral-500 dark:text-neutral-400">
+                <TableRow>
+                  <TableCell colSpan={4} className="px-4 py-10 text-center text-sm text-neutral-500 dark:text-neutral-400">
                     No batches yet. Create a batch to start organizing interns.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Mobile batch records */}
-        <ul className="grid gap-3 md:hidden">
+        <ul className="grid gap-3 sm:hidden">
           {visibleBatches.map((batch) => (
             <li key={batch.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-900">
               <div className="flex items-start justify-between gap-3">
@@ -352,8 +357,8 @@ export function BatchesManager({
 
       <Modal open={exportOpen} onOpenChange={setExportOpen} title="Download batch data" description="Choose the first and last batch to include in the CSV export.">
         <div className="grid gap-3 pt-1 sm:grid-cols-2">
-          <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">From batch<select value={exportFrom} onChange={(event) => setExportFrom(event.target.value)} className={inputCls}>{batches.map((batch) => <option key={batch.id} value={batch.id}>{batch.name}</option>)}</select></label>
-          <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">To batch<select value={exportTo} onChange={(event) => setExportTo(event.target.value)} className={inputCls}>{batches.map((batch) => <option key={batch.id} value={batch.id}>{batch.name}</option>)}</select></label>
+          <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">From batch<Select value={exportFrom} onValueChange={setExportFrom}><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger><SelectContent>{batches.map((batch) => <SelectItem key={batch.id} value={String(batch.id)}>{batch.name}</SelectItem>)}</SelectContent></Select></label>
+          <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">To batch<Select value={exportTo} onValueChange={setExportTo}><SelectTrigger className={inputCls}><SelectValue /></SelectTrigger><SelectContent>{batches.map((batch) => <SelectItem key={batch.id} value={String(batch.id)}>{batch.name}</SelectItem>)}</SelectContent></Select></label>
         </div>
         <Modal.Footer><button type="button" onClick={() => setExportOpen(false)} className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 dark:border-neutral-700 dark:text-neutral-300">Cancel</button><button type="button" onClick={downloadBatches} className="inline-flex items-center gap-2 rounded-lg bg-[#1E4F91] px-4 py-2 text-xs font-semibold text-white"><Download className="h-3.5 w-3.5" />Download CSV</button></Modal.Footer>
       </Modal>
@@ -384,7 +389,7 @@ export function BatchesManager({
         <form onSubmit={submit} className="grid gap-4 pt-1">
           <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             Batch Name
-            <input
+            <Input
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -393,21 +398,15 @@ export function BatchesManager({
             />
           </label>
           <label className="flex items-center gap-2 text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-            <input
-              type="checkbox"
-              checked={form.isCurrent}
-              onChange={(e) =>
-                setForm({ ...form, isCurrent: e.target.checked })
-              }
-              className="h-4 w-4 rounded border-neutral-300 text-[#1E4F91] focus:ring-[#1E4F91]"
-            />
+            <Checkbox checked={form.isCurrent} onCheckedChange={(checked) => setForm({ ...form, isCurrent: checked === true })} />
             Mark as active current batch immediately
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
               Start Date
               <NepaliDateInput
                 required
+                className="w-full"
                 value={form.startDate}
                 onChange={(value) => setForm({ ...form, startDate: value })}
               />
@@ -416,6 +415,7 @@ export function BatchesManager({
               End Date
               <NepaliDateInput
                 required
+                className="w-full"
                 value={form.endDate}
                 onChange={(value) => setForm({ ...form, endDate: value })}
               />
@@ -465,18 +465,19 @@ export function BatchesManager({
         <form onSubmit={submitEdit} className="grid gap-4 pt-1">
           <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             Batch Name
-            <input
+            <Input
               required
               value={editForm.name}
               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
               className={inputCls}
             />
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
               Start Date
               <NepaliDateInput
                 required
+                className="w-full"
                 value={editForm.startDate}
                 onChange={(value) => setEditForm({ ...editForm, startDate: value })}
               />
@@ -485,6 +486,7 @@ export function BatchesManager({
               End Date
               <NepaliDateInput
                 required
+                className="w-full"
                 value={editForm.endDate}
                 onChange={(value) => setEditForm({ ...editForm, endDate: value })}
               />
@@ -517,38 +519,19 @@ export function BatchesManager({
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
+      <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && closeDelete()}
-        title="Delete Batch?"
-        description={
-          deleteTarget
-            ? `Are you sure you want to permanently delete "${deleteTarget.name}"? This will also remove all ${deleteTarget.studentCount} intern record(s) and their attendance history.`
-            : undefined
-        }
       >
-        {deleteError && (
-          <div
-            role="alert"
-            className="mb-3 rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 dark:bg-red-950/40 dark:text-red-400"
-          >
-            {deleteError}
-          </div>
-        )}
-        <Modal.Footer>
-          <button
-            type="button"
-            onClick={closeDelete}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={deletePending}
-            onClick={confirmDelete}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-          >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Batch?</AlertDialogTitle>
+            <AlertDialogDescription>{deleteTarget ? `Are you sure you want to permanently delete "${deleteTarget.name}"? This will also remove all ${deleteTarget.studentCount} intern record(s) and their attendance history.` : ""}</AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{deleteError}</div>}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletePending} onClick={closeDelete}>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={deletePending} onClick={(event) => { event.preventDefault(); void confirmDelete(); }}>
             {deletePending ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -560,9 +543,10 @@ export function BatchesManager({
                 Delete Batch
               </>
             )}
-          </button>
-        </Modal.Footer>
-      </Modal>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
