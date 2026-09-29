@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   if (!body.ok) return body.response;
 
   try {
-    const result = await markAttendance({ ...body.data, userId: auth.data.userId });
+    const result = await markAttendance({ ...body.data, userId: auth.data.userId, role: auth.data.role });
     return result.ok
       ? NextResponse.json({ record: result.data })
       : jsonError(result.error, result.status);
@@ -54,7 +54,7 @@ export async function DELETE(request: NextRequest) {
   if (!query.ok) return query.response;
 
   try {
-    const result = await clearAttendance(query.data.studentId, query.data.date);
+    const result = await clearAttendance(query.data.studentId, query.data.date, query.data.session, auth.data.role);
     return result.ok ? NextResponse.json(result.data) : jsonError(result.error, result.status);
   } catch (error) {
     return handleError(error);
