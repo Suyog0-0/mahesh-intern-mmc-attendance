@@ -21,6 +21,7 @@ export const attendanceStatusEnum = pgEnum("attendance_status", [
   "leave",
   "present",
 ]);
+export const attendanceSessionEnum = pgEnum("attendance_session", ["morning", "ward"]);
 export const attendanceDepartmentEnum = pgEnum("attendance_department", [
   "cardiology",
   "dermatology",
@@ -80,6 +81,7 @@ export const attendanceRecords = pgTable(
       .notNull()
       .references(() => students.id),
     date: date("date").notNull(),
+    session: attendanceSessionEnum("session").notNull().default("morning"),
     status: attendanceStatusEnum("status").notNull(),
     department: attendanceDepartmentEnum("department"),
     remarks: text("remarks"),
@@ -89,7 +91,7 @@ export const attendanceRecords = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
-    unique().on(table.studentId, table.date),
+    unique().on(table.studentId, table.date, table.session),
     index("attendance_records_date_idx").on(table.date),
   ]
 );
