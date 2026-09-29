@@ -3,6 +3,9 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Eye, EyeOff, Loader2, ShieldCheck, UserRound, LockKeyhole, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 function safeNext(next: string | null): string {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
@@ -81,12 +84,12 @@ export default function LoginForm() {
           </div>
         )}
 
-        <label htmlFor="username" className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+        <Label htmlFor="username" className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
           Username
-        </label>
+        </Label>
         <div className="login-field mt-2 flex h-12 items-center gap-3 rounded-lg border border-neutral-300/90 bg-white px-3.5 transition-all focus-within:border-[#1E4F91] focus-within:ring-4 focus-within:ring-[#1E4F91]/[0.09] dark:border-neutral-700 dark:bg-neutral-950 dark:focus-within:border-[#84AEE4]">
           <UserRound className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden="true" />
-          <input
+          <Input
             id="username"
             name="username"
             type="text"
@@ -98,16 +101,16 @@ export default function LoginForm() {
             onChange={(e) => { setUsername(e.target.value); if (error) setError(null); }}
             placeholder="Enter your username"
             aria-invalid={!!error}
-            className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-base text-neutral-900 outline-none placeholder:text-sm placeholder:text-neutral-400 focus:ring-0 dark:text-neutral-100 dark:placeholder:text-neutral-500"
+            className="!h-full !min-w-0 !flex-1 !rounded-none !border-0 !bg-transparent !p-0 !text-base !text-neutral-900 !shadow-none !outline-none !ring-0 placeholder:!text-sm placeholder:!text-neutral-400 focus:!border-0 focus:!ring-0 focus-visible:!border-0 focus-visible:!ring-0 dark:!text-neutral-100 dark:placeholder:!text-neutral-500"
           />
         </div>
 
-        <label htmlFor="password" className="mt-5 block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+        <Label htmlFor="password" className="mt-5 block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
           Password
-        </label>
+        </Label>
         <div className="login-field mt-2 flex h-12 items-center gap-3 rounded-lg border border-neutral-300/90 bg-white px-3.5 transition-all focus-within:border-[#1E4F91] focus-within:ring-4 focus-within:ring-[#1E4F91]/[0.09] dark:border-neutral-700 dark:bg-neutral-950 dark:focus-within:border-[#84AEE4]">
           <LockKeyhole className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden="true" />
-          <input
+          <Input
             id="password"
             name="password"
             type={showPassword ? "text" : "password"}
@@ -118,7 +121,7 @@ export default function LoginForm() {
             onChange={(e) => { setPassword(e.target.value); if (error) setError(null); }}
             placeholder="Enter your password"
             aria-invalid={!!error}
-            className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-base text-neutral-900 outline-none placeholder:text-sm placeholder:text-neutral-400 focus:ring-0 dark:text-neutral-100 dark:placeholder:text-neutral-500"
+            className="!h-full !min-w-0 !flex-1 !rounded-none !border-0 !bg-transparent !p-0 !text-base !text-neutral-900 !shadow-none !outline-none !ring-0 placeholder:!text-sm placeholder:!text-neutral-400 focus:!border-0 focus:!ring-0 focus-visible:!border-0 focus-visible:!ring-0 dark:!text-neutral-100 dark:placeholder:!text-neutral-500"
           />
           <button
             type="button"
@@ -140,10 +143,10 @@ export default function LoginForm() {
           Your account is protected with secure sign-in.
         </div>
 
-        <button
+        <Button
           type="submit"
           disabled={pending}
-          className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#1E4F91] px-4 text-sm font-semibold text-white shadow-sm shadow-[#1E4F91]/15 transition-all hover:bg-[#163B69] active:translate-y-px focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#1E4F91]/20 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none dark:hover:bg-[#477DB9]"
+          className="mt-6 h-12 w-full rounded-lg bg-[#1E4F91] text-sm font-semibold text-white shadow-sm shadow-[#1E4F91]/15 hover:bg-[#163B69] focus-visible:ring-4 focus-visible:ring-[#1E4F91]/20 disabled:cursor-not-allowed dark:hover:bg-[#477DB9]"
         >
           {pending ? (
             <>
@@ -153,7 +156,7 @@ export default function LoginForm() {
           ) : (
             <>Sign in <ArrowRight className="h-4 w-4" aria-hidden="true" /></>
           )}
-        </button>
+        </Button>
       </form>
       <p className="mt-5 text-center text-[11px] text-neutral-400 dark:text-neutral-500">For authorized MMC staff and administrators.</p>
     </div>
