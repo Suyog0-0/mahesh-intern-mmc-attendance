@@ -1,4 +1,4 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/drizzle/schema";
 import type { AppRole } from "@/lib/auth/roles";
@@ -20,7 +20,7 @@ export async function getUserByUsername(
   const [row] = await db
     .select()
     .from(users)
-    .where(eq(users.username, username))
+    .where(sql`lower(${users.username}) = ${username.trim().toLowerCase()}`)
     .limit(1);
   return row;
 }
