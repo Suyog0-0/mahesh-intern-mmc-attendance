@@ -10,6 +10,11 @@ import type { Batch } from "@/lib/db/queries/batches";
 import { formatPostingPeriod } from "@/lib/date";
 import { NepaliDateInput } from "@/components/nepali-date-input";
 import { Pagination } from "@/components/pagination";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatPersonName } from "@/lib/utils";
 
 interface Props {
   batchName: string;
@@ -45,7 +50,7 @@ export function StudentsManager({
   const [query, setQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 20;
 
   const filtered = students.filter((s) => {
     const q = query.trim().toLowerCase();
@@ -214,7 +219,7 @@ export function StudentsManager({
           <div className="flex items-center gap-2">
           <div className="relative min-w-0 flex-1 sm:flex-none">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
-            <input
+            <Input
               type="search"
               value={query}
               onChange={(e) => { setQuery(e.target.value); setPage(1); }}
@@ -228,19 +233,19 @@ export function StudentsManager({
         </div>
 
         {/* Desktop table */}
-        <div className="hidden overflow-x-auto rounded-xl border border-neutral-200/60 dark:border-neutral-800 md:block">
-          <table className="w-full text-left text-xs min-w-[600px]">
-            <thead>
-              <tr className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
-                <th scope="col" className="px-4 py-3">Roll #</th>
-                <th scope="col" className="px-4 py-3">Full Name</th>
-                <th scope="col" className="px-4 py-3">Posting Period (Date Range)</th>
-                <th scope="col" className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
+        <div className="hidden overflow-x-auto rounded-xl border border-neutral-200/60 dark:border-neutral-800 sm:block">
+          <Table className="w-full text-left text-xs min-w-[600px]">
+            <TableHeader>
+              <TableRow className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
+                <TableHead scope="col" className="px-4 py-3">Roll #</TableHead>
+                <TableHead scope="col" className="px-4 py-3">Full Name</TableHead>
+                <TableHead scope="col" className="px-4 py-3">Posting Period (Date Range)</TableHead>
+                <TableHead scope="col" className="px-4 py-3 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
               {visibleStudents.map((s) => (
-                <tr
+                <TableRow
                   key={s.id}
                   onClick={() => openStudent(s.id)}
                   className="group cursor-pointer transition-colors hover:bg-neutral-50/90 dark:hover:bg-neutral-800/40"
@@ -253,16 +258,16 @@ export function StudentsManager({
                   }}
                   title="Click to view full intern history"
                 >
-                  <td data-label="Roll #" className="px-4 py-3.5 font-mono font-bold text-[#1E4F91] group-hover:underline dark:text-[#A9C5EA]">
+                  <TableCell data-label="Roll #" className="px-4 py-3.5 font-mono font-bold text-[#1E4F91] group-hover:underline dark:text-[#A9C5EA]">
                     #{s.rollNumber}
-                  </td>
-                  <td data-label="Full Name" className="px-4 py-3.5 font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">
-                    {s.name}
-                  </td>
-                  <td data-label="Posting Period" className="px-4 py-3.5 text-neutral-600 dark:text-neutral-400 font-mono">
+                  </TableCell>
+                  <TableCell data-label="Full Name" className="px-4 py-3.5 font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">
+                    {formatPersonName(s.name)}
+                  </TableCell>
+                  <TableCell data-label="Posting Period" className="px-4 py-3.5 text-neutral-600 dark:text-neutral-400 font-mono">
                     {formatPostingPeriod(s.postingPeriod)}
-                  </td>
-                  <td data-label="Actions" className="px-4 py-3.5 text-right">
+                  </TableCell>
+                  <TableCell data-label="Actions" className="px-4 py-3.5 text-right">
                       <button
                         type="button"
                         aria-label={`View ${s.name} profile`}
@@ -292,31 +297,31 @@ export function StudentsManager({
                     >
                       <Trash2 className="h-4 w-4 inline-block" />
                     </button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               {filtered.length === 0 && (
-                <tr>
-                  <td
+                <TableRow>
+                  <TableCell
                     colSpan={4}
                     className="py-8 text-center text-xs text-neutral-500 dark:text-neutral-400"
                   >
                     {students.length === 0 ? "Add interns first to start managing this batch." : "No matching interns found."}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Mobile intern records */}
-        <ul className="grid gap-3 md:hidden">
+        <ul className="grid gap-3 sm:hidden">
           {visibleStudents.map((student) => (
             <li key={student.id} className="rounded-xl border border-neutral-200/90 bg-white p-3 shadow-sm shadow-neutral-900/[0.025] transition-colors hover:border-neutral-300 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700">
               <button type="button" aria-label={`View ${student.name} profile`} onClick={() => openStudent(student.id)} className="flex w-full min-w-0 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91]">
                 <span className="flex h-9 min-w-10 shrink-0 items-center justify-center rounded-lg bg-[#1E4F91]/[0.07] px-2 font-mono text-[11px] font-bold text-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">#{student.rollNumber}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{student.name}</span>
+                  <span className="block truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{formatPersonName(student.name)}</span>
                   <span className="mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-md bg-neutral-50 px-2 py-1 text-[10px] font-medium tabular-nums text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"><CalendarDays className="h-3 w-3 shrink-0 text-[#1E4F91] dark:text-[#A9C5EA]" />{formatPostingPeriod(student.postingPeriod)}</span>
               </span>
               <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300"><Eye className="h-4 w-4" /></span>
@@ -357,24 +362,21 @@ export function StudentsManager({
           {/* Batch Selector Dropdown */}
           <Field label="Assign Batch">
             <div className="relative mt-1.5">
-              <select
-                value={form.batchId}
-                onChange={(e) =>
-                  setForm({ ...form, batchId: Number(e.target.value) })
-                }
-                className={inputCls}
-              >
+              <Select value={String(form.batchId)} onValueChange={(value) => setForm({ ...form, batchId: Number(value) })}>
+                <SelectTrigger className={inputCls}><SelectValue /></SelectTrigger>
+                <SelectContent>
                 {batches.map((b) => (
-                  <option key={b.id} value={b.id}>
+                  <SelectItem key={b.id} value={String(b.id)}>
                     {b.name} {b.isCurrent ? "(Current Active)" : ""}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
+                </SelectContent>
+              </Select>
             </div>
           </Field>
 
           <Field label="Roll Number">
-            <input
+            <Input
               required
               value={form.rollNumber}
               onChange={(e) => setForm({ ...form, rollNumber: e.target.value })}
@@ -383,7 +385,7 @@ export function StudentsManager({
             />
           </Field>
           <Field label="Full Name">
-            <input
+            <Input
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -411,7 +413,7 @@ export function StudentsManager({
           </div>
 
           <Field label="Remarks / Notes (Optional)">
-            <input
+            <Input
               value={form.remarks}
               onChange={(e) => setForm({ ...form, remarks: e.target.value })}
               placeholder="e.g. Surgery rotation"
@@ -439,33 +441,21 @@ export function StudentsManager({
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
+      <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete Intern Record?"
-        description={
-          deleteTarget
-            ? `This permanently removes ${deleteTarget.name} (Roll #${deleteTarget.rollNumber}) and all associated attendance records and leave logs. This action cannot be undone.`
-            : undefined
-        }
       >
-        <Modal.Footer>
-          <button
-            type="button"
-            onClick={() => setDeleteTarget(null)}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={confirmDelete}
-            className="rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700"
-          >
-            Delete Permanently
-          </button>
-        </Modal.Footer>
-      </Modal>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Intern Record?</AlertDialogTitle>
+            <AlertDialogDescription>{deleteTarget ? `This permanently removes ${deleteTarget.name} (Roll #${deleteTarget.rollNumber}) and all associated attendance records and leave logs. This action cannot be undone.` : ""}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteTarget(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Delete Permanently</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
