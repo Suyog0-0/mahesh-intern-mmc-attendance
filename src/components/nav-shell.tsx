@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   CheckSquare,
@@ -26,6 +26,9 @@ import { StudentDrawerProvider } from "@/components/student-drawer-context";
 import { ToastProvider } from "@/components/toast-provider";
 import type { AppRole } from "@/lib/auth/roles";
 import { hasAdminAccess } from "@/lib/auth/roles";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { formatPersonName } from "@/lib/utils";
 
 interface NavShellProps {
   user: { name: string; username: string; role: AppRole };
@@ -52,7 +55,6 @@ export function NavShell({ user, children }: NavShellProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const moreLinks = hasAdminAccess(user.role) ? MORE_LINKS_ADMIN : MORE_LINKS_STAFF;
   const primaryLinks = hasAdminAccess(user.role)
     ? [COMMON_PRIMARY_LINKS[0], COMMON_PRIMARY_LINKS[1], { href: "/students", label: "Students", icon: Users }, COMMON_PRIMARY_LINKS[2]]
@@ -80,16 +82,6 @@ export function NavShell({ user, children }: NavShellProps) {
     localStorage.setItem("theme", nowDark ? "dark" : "light");
     setIsDark(nowDark);
   }
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   async function handleLogout() {
     if (loggingOut) return;
@@ -131,15 +123,15 @@ export function NavShell({ user, children }: NavShellProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-bold text-neutral-900 dark:text-neutral-100">
-                  {user.name}
+                  {formatPersonName(user.name)}
                 </p>
                 <p className="mt-0.5 truncate text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
                   @{user.username}
                 </p>
               </div>
-              <button type="button" onClick={toggleTheme} aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"} title={isDark ? "Switch to light theme" : "Switch to dark theme"} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-neutral-200 text-neutral-500 transition-colors hover:border-[#B8CCE2] hover:bg-[#F5F8FC] hover:text-[#163B69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white">
+              <Button type="button" variant="ghost" size="icon" onClick={toggleTheme} aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"} title={isDark ? "Switch to light theme" : "Switch to dark theme"} className="h-8 w-8 shrink-0 rounded-lg border border-neutral-200 text-neutral-500 hover:border-[#B8CCE2] hover:bg-[#F5F8FC] hover:text-[#163B69] focus-visible:ring-[#1E4F91] dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white">
                 {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </button>
+              </Button>
               </div>
               <div className="mt-2.5 flex items-center gap-1.5 border-t border-neutral-100 pt-2.5 dark:border-neutral-800">
                 <ShieldCheck className="h-3.5 w-3.5 text-[#1E4F91] dark:text-[#A9C5EA]" aria-hidden="true" />
@@ -183,59 +175,44 @@ export function NavShell({ user, children }: NavShellProps) {
 
           <div className="flex items-center gap-2">
             {/* Theme toggle */}
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={toggleTheme}
               aria-label="Toggle theme"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-[#47698F] transition-colors hover:bg-[#E7EEF7] hover:text-[#163B69] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-white"
+              className="h-8 w-8 rounded-full text-[#47698F] hover:bg-[#E7EEF7] hover:text-[#163B69] focus-visible:ring-[#1E4F91] dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-white"
             >
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
+            </Button>
 
-            <div className="relative" ref={dropdownRef}>
-              <button
-                type="button"
-                onClick={() => setDropdownOpen((prev) => !prev)}
-                aria-label="Toggle profile menu"
-              className="flex h-9 items-center gap-1 rounded-full border border-[#D5E1EF] bg-white/90 py-1 pl-1 pr-2 text-xs font-bold text-[#1E4F91] shadow-sm transition-colors hover:border-[#B8CCE2] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:border-neutral-700 dark:bg-neutral-900/90 dark:text-[#A9C5EA] dark:hover:bg-neutral-800"
-              >
+            <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+              <DropdownMenuTrigger asChild>
+              <button type="button" aria-label="Toggle profile menu" className="flex h-9 items-center gap-1 rounded-full border border-[#D5E1EF] bg-white/90 py-1 pl-1 pr-2 text-xs font-bold text-[#1E4F91] shadow-sm transition-colors hover:border-[#B8CCE2] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:border-neutral-700 dark:bg-neutral-900/90 dark:text-[#A9C5EA] dark:hover:bg-neutral-800">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1E4F91]/10 dark:bg-[#1E4F91]/20">{initials(user.name)}</span>
                 <ChevronDown className={`h-3.5 w-3.5 text-neutral-400 transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
               </button>
+              </DropdownMenuTrigger>
 
-            {/* Mobile Header Dropdown Popover */}
-            {dropdownOpen && (
-              <div className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl shadow-neutral-900/10 animate-in fade-in slide-in-from-top-2 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/30">
+              <DropdownMenuContent align="end" className="w-64 overflow-hidden rounded-xl p-0 shadow-lg">
                 <div className="flex items-center gap-3 border-b border-neutral-100 bg-neutral-50/80 px-4 py-3 dark:border-neutral-800 dark:bg-neutral-800/40">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1E4F91]/10 text-xs font-bold text-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">{initials(user.name)}</span>
-                  <div className="min-w-0"><p className="truncate text-xs font-semibold text-neutral-900 dark:text-neutral-100">{user.name}</p><p className="truncate text-[11px] text-neutral-500 dark:text-neutral-400">@{user.username}</p></div>
+                  <div className="min-w-0"><p className="truncate text-xs font-semibold text-neutral-900 dark:text-neutral-100">{formatPersonName(user.name)}</p><p className="truncate text-[11px] text-neutral-500 dark:text-neutral-400">@{user.username}</p></div>
                 </div>
                 <div className="px-4 py-2"><span className="inline-flex items-center gap-1.5 rounded-full bg-[#1E4F91]/[0.07] px-2 py-1 text-[10px] font-semibold capitalize text-[#1E4F91] dark:bg-[#1E4F91]/15 dark:text-[#A9C5EA]"><ShieldCheck className="h-3 w-3" />{user.role === "superadmin" ? "Super admin" : user.role} account</span></div>
-                <Link
-                  href="/settings"
-                  onClick={() => setDropdownOpen(false)}
-                  className="mx-2 mb-1 flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                >
-                  <Settings className="h-4 w-4 text-neutral-500" />
-                  Settings & Profile
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                  className="mx-2 mb-2 flex w-[calc(100%-1rem)] items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50 dark:text-red-300 dark:hover:bg-red-950/40"
-                >
-                  <LogOut className="h-4 w-4" />
-                  {loggingOut ? "Logging out…" : "Log Out"}
-                </button>
-              </div>
-            )}
-            </div>
+                <DropdownMenuItem asChild className="mx-2 mb-1 flex cursor-pointer gap-2.5 rounded-lg px-3 py-2.5 text-xs font-semibold text-neutral-700 focus:bg-neutral-100 dark:text-neutral-300 dark:focus:bg-neutral-800">
+                  <Link href="/settings"><Settings className="h-4 w-4 text-neutral-500" />Settings &amp; Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={loggingOut} onSelect={() => void handleLogout()} className="mx-2 mb-2 flex cursor-pointer gap-2.5 rounded-lg px-3 py-2.5 text-xs font-semibold text-red-700 focus:bg-red-50 focus:text-red-700 dark:text-red-300 dark:focus:bg-red-950/40 dark:focus:text-red-200">
+                  <LogOut className="h-4 w-4" />{loggingOut ? "Logging out…" : "Log Out"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="mx-auto min-w-0 w-full max-w-6xl flex-1 px-3 py-4 pb-24 sm:px-4 sm:py-6 md:pb-8">
+        <main className="app-main mx-auto min-w-0 w-full max-w-6xl flex-1 px-3 py-4 pb-24 sm:px-4 sm:py-6 md:pb-8">
           {children}
         </main>
 
