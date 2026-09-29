@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, getTableColumns, gte, lte } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { attendanceRecords, students, users } from "@/drizzle/schema";
-import type { AttendanceDepartment, AttendanceStatus } from "@/lib/attendance/types";
+import type { AttendanceDepartment, AttendanceSession, AttendanceStatus } from "@/lib/attendance/types";
 
 export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
 export interface DayRecordRow {
@@ -9,6 +9,7 @@ export interface DayRecordRow {
   rollNumber: string;
   name: string;
   status: AttendanceStatus;
+  session: AttendanceSession;
   department: AttendanceDepartment | null;
   remarks: string | null;
   markedByName: string | null;
@@ -18,14 +19,16 @@ export interface RangeRecordRow {
   studentId: number;
   date: string;
   status: AttendanceStatus;
+  session: AttendanceSession;
   department: AttendanceDepartment | null;
 }
 
-/** One row per student/date exception or department presence; no row = present. */
+/** One row per student/date/session exception or department presence. */
 export async function upsertAttendance(input: {
   studentId: number;
   date: string;
   status: AttendanceStatus;
+  session: AttendanceSession;
   department?: AttendanceDepartment | null;
   remarks: string | null;
   markedBy: number;
@@ -34,9 +37,10 @@ export async function upsertAttendance(input: {
     .insert(attendanceRecords)
     .values(input)
     .onConflictDoUpdate({
-      target: [attendanceRecords.studentId, attendanceRecords.date],
+      target: [attendanceRecords.studentId, attendanceRecords.date, attendanceRecords.session],
       set: {
         status: input.status,
+        session: input.session,
         department: input.department ?? null,
         remarks: input.remarks,
         markedBy: input.markedBy,
@@ -51,11 +55,12 @@ export async function upsertAttendance(input: {
 export async function deleteAttendance(
   studentId: number,
   date: string,
+  session: AttendanceSession,
 ): Promise<boolean> {
   const rows = await db
     .delete(attendanceRecords)
     .where(
-      and(eq(attendanceRecords.studentId, studentId), eq(attendanceRecords.date, date)),
+      and(eq(attendanceRecords.studentId, studentId), eq(attendanceRecords.date, date), eq(attendanceRecords.session, session)),
     )
     .returning({ id: attendanceRecords.id });
   return rows.length > 0;
@@ -64,12 +69,13 @@ export async function deleteAttendance(
 export async function getAttendanceFor(
   studentId: number,
   date: string,
+  session: AttendanceSession,
 ): Promise<AttendanceRecord | undefined> {
   const [row] = await db
     .select()
     .from(attendanceRecords)
     .where(
-      and(eq(attendanceRecords.studentId, studentId), eq(attendanceRecords.date, date)),
+      and(eq(attendanceRecords.studentId, studentId), eq(attendanceRecords.date, date), eq(attendanceRecords.session, session)),
     )
     .limit(1);
   return row;
@@ -85,6 +91,7 @@ export async function listRecordsForDate(
       rollNumber: students.rollNumber,
       name: students.name,
       status: attendanceRecords.status,
+      session: attendanceRecords.session,
       department: attendanceRecords.department,
       remarks: attendanceRecords.remarks,
       markedByName: users.name,
@@ -106,6 +113,7 @@ export async function listRecordsInRange(
       studentId: attendanceRecords.studentId,
       date: attendanceRecords.date,
       status: attendanceRecords.status,
+      session: attendanceRecords.session,
       department: attendanceRecords.department,
     })
     .from(attendanceRecords)
