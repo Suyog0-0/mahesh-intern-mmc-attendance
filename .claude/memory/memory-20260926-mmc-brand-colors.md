@@ -4,3 +4,4 @@
 - MMC red accent: `#B4233A`, used selectively for the identity and semantic danger/absence/error states.
 - Use cool blue-gray neutrals for surfaces and borders.
 - Preserve semantic state colors for success, warning, and errors; do not apply brand colors indiscriminately.
+1
