@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isISODate, isMonthString } from "@/lib/date";
 import { ATTENDANCE_STATUSES } from "@/lib/attendance/types";
+import { ATTENDANCE_SESSIONS } from "@/lib/attendance/types";
 
 export const isoDateSchema = z
   .string()
@@ -28,6 +29,7 @@ export const optionalText = (max: number) =>
     .transform((v) => (v ? v : null));
 
 export const attendanceStatusSchema = z.enum(ATTENDANCE_STATUSES);
+export const attendanceSessionSchema = z.enum(ATTENDANCE_SESSIONS);
 export const attendanceDepartmentSchema = z.enum([
   "cardiology",
   "dermatology",

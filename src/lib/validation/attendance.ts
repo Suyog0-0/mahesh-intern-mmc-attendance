@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   attendanceStatusSchema,
   attendanceDepartmentSchema,
+  attendanceSessionSchema,
   idSchema,
   idStringSchema,
   isoDateSchema,
@@ -12,6 +13,7 @@ import {
 export const markAttendanceSchema = z.object({
   studentId: idSchema,
   date: isoDateSchema,
+  session: attendanceSessionSchema,
   status: attendanceStatusSchema,
   department: attendanceDepartmentSchema.nullish(),
   remarks: optionalText(1000),
@@ -27,6 +29,7 @@ export const markAttendanceSchema = z.object({
 export const clearAttendanceQuerySchema = z.object({
   studentId: idStringSchema,
   date: isoDateSchema,
+  session: attendanceSessionSchema,
 });
 
 export const lookupQuerySchema = z.object({

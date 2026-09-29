@@ -7,6 +7,13 @@ export const ATTENDANCE_STATUSES = [
 
 export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
 
+export const ATTENDANCE_SESSIONS = ["morning", "ward"] as const;
+export type AttendanceSession = (typeof ATTENDANCE_SESSIONS)[number];
+export const ATTENDANCE_SESSION_LABEL: Record<AttendanceSession, string> = {
+  morning: "Morning",
+  ward: "Ward",
+};
+
 export const ATTENDANCE_DEPARTMENTS = [
   "cardiology",
   "dermatology",
