@@ -2,6 +2,7 @@
 
 import { useStudentDrawer } from "@/components/student-drawer-context";
 import { UserX } from "lucide-react";
+import { formatPersonName } from "@/lib/utils";
 
 interface Absentee {
   id: number;
@@ -43,7 +44,7 @@ export function TopAbsenteesList({ absentees }: { absentees: Absentee[] }) {
               #{s.rollNumber}
             </span>{" "}
             <span className="font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">
-              {s.name}
+              {formatPersonName(s.name)}
             </span>
           </span>
           <span className="shrink-0 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-bold text-red-700 transition-colors group-hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300">
