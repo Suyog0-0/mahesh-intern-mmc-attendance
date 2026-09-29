@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/card";
 import { Modal } from "@/components/modal";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/toast-provider";
 import {
   User,
@@ -19,6 +20,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { AppRole } from "@/lib/auth/roles";
+import { formatPersonName } from "@/lib/utils";
 
 interface Props {
   session: { name: string; username: string; role: AppRole };
@@ -125,7 +127,7 @@ export function SettingsView({ session, currentBatch }: Props) {
             </div>
             <div>
               <h3 className="font-bold text-base text-neutral-900 dark:text-neutral-50">
-                {session.name}
+                {formatPersonName(session.name)}
               </h3>
               <p className="text-xs font-mono text-neutral-500 dark:text-neutral-400">
                 @{session.username}
@@ -268,7 +270,7 @@ export function SettingsView({ session, currentBatch }: Props) {
         <form onSubmit={handlePasswordSubmit} className="grid gap-3.5 pt-1">
           <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             New Password (Min 8 characters)
-            <input
+            <Input
               required
               type="password"
               minLength={8}
