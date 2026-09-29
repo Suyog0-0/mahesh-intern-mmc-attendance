@@ -32,6 +32,7 @@ export interface RecordInfo {
   studentId: number;
   date: string;
   status: AttendanceStatus;
+  session?: "morning" | "ward";
 }
 export interface LeaveRange {
   studentId: number;
@@ -85,12 +86,23 @@ export function summarize(input: {
   const ids = new Set(students.map((s) => s.id));
 
   const recordsByStudent = new Map<number, Map<string, AttendanceStatus>>();
+  const absentDatesByStudent = new Map<number, Set<string>>();
   let totalRecords = 0;
   for (const r of records) {
     if (!ids.has(r.studentId) || r.date < from || r.date > to) continue;
     let m = recordsByStudent.get(r.studentId);
     if (!m) recordsByStudent.set(r.studentId, (m = new Map()));
-    m.set(r.date, r.status);
+    if (r.status === "absent") {
+      let dates = absentDatesByStudent.get(r.studentId);
+      if (!dates) absentDatesByStudent.set(r.studentId, (dates = new Set()));
+      dates.add(r.date);
+    }
+    const current = m.get(r.date);
+    // Absence in either session makes the whole day absent. Otherwise prefer
+    // a non-present exception if either session carries one.
+    if (r.status === "absent" || !current || (current === "present" && r.status !== "present")) {
+      m.set(r.date, r.status);
+    }
     totalRecords++;
   }
 
@@ -128,6 +140,7 @@ export function summarize(input: {
         }
       }
     }
+    absenceCount = absentDatesByStudent.get(s.id)?.size ?? 0;
     const ranged = leaveDatesByStudent.get(s.id);
     if (ranged) {
       for (const date of ranged) {

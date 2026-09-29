@@ -8,7 +8,7 @@ import {
   upsertAttendance,
   type AttendanceRecord,
 } from "@/lib/db/queries/attendance";
-import type { AttendanceDepartment, AttendanceStatus } from "./types";
+import type { AttendanceDepartment, AttendanceSession, AttendanceStatus } from "./types";
 import {
   getActiveLeave,
   listLeavesOverlapping,
@@ -70,7 +70,7 @@ export async function getStudentSummary(student: Student, batch: Batch) {
   ]);
   const summary = summarize({
     students: [student],
-    records: records.map((r) => ({ studentId: r.studentId, date: r.date, status: r.status })),
+    records: records.map((r) => ({ studentId: r.studentId, date: r.date, status: r.status, session: r.session })),
     leaves: leaves.map((l) => ({
       studentId: l.studentId,
       startDate: l.startDate,
@@ -114,6 +114,7 @@ export interface DayListRow {
   rollNumber: string;
   name: string;
   status: AttendanceStatus;
+  session: AttendanceSession;
   department: AttendanceDepartment | null;
   remarks: string | null;
   markedByName: string | null;
@@ -129,16 +130,16 @@ export async function getAttendanceDay(
     listRecordsForDate(batchId, date),
     listLeavesOverlapping(batchId, date, date),
   ]);
-  const marked = new Set(records.map((r) => r.studentId));
   const rows: DayListRow[] = [
     ...records.map((r) => ({ ...r, source: "record" as const })),
     ...leaves
-      .filter((l) => !marked.has(l.studentId))
+      .filter((l) => !records.some((r) => r.studentId === l.studentId && r.session === "morning"))
       .map((l) => ({
         studentId: l.studentId,
         rollNumber: l.rollNumber,
         name: l.name,
         status: "leave" as const,
+        session: "morning" as const,
         department: null,
         remarks: l.reason,
         markedByName: l.createdByName,
@@ -164,7 +165,7 @@ export async function lookupForAttendance(
   const student = await findStudentByRoll(batch.id, rollNumber);
   if (!student) return fail(404, `No student with roll number ${rollNumber} in the current batch`);
   const [record, leave] = await Promise.all([
-    getAttendanceFor(student.id, date),
+    getAttendanceFor(student.id, date, "morning"),
     getActiveLeave(student.id, date),
   ]);
   return ok({
@@ -206,16 +207,23 @@ export async function markAttendance(input: {
   studentId: number;
   date: string;
   status: AttendanceStatus;
+  session: AttendanceSession;
   department?: AttendanceDepartment | null;
   remarks: string | null;
   userId: number;
+  role: "staff" | "admin" | "superadmin";
 }): Promise<Result<AttendanceRecord>> {
   const student = await resolveCurrentStudent(input.studentId, input.date);
   if (!student.ok) return student;
+  const existing = await getAttendanceFor(input.studentId, input.date, input.session);
+  if (existing && input.role !== "superadmin" && Date.now() - existing.createdAt.getTime() > 5 * 60 * 1000) {
+    return fail(403, "This attendance entry is locked after five minutes. Only the super admin can change it.");
+  }
   const record = await upsertAttendance({
     studentId: input.studentId,
     date: input.date,
     status: input.status,
+    session: input.session,
     department: input.department,
     remarks: input.remarks,
     markedBy: input.userId,
@@ -227,10 +235,16 @@ export async function markAttendance(input: {
 export async function clearAttendance(
   studentId: number,
   date: string,
+  session: AttendanceSession,
+  role: "staff" | "admin" | "superadmin",
 ): Promise<Result<{ removed: boolean }>> {
   const student = await resolveStudentForDate(studentId, date);
   if (!student.ok) return student;
-  return ok({ removed: await deleteAttendance(studentId, date) });
+  const existing = await getAttendanceFor(studentId, date, session);
+  if (existing && role !== "superadmin" && Date.now() - existing.createdAt.getTime() > 5 * 60 * 1000) {
+    return fail(403, "This attendance entry is locked after five minutes. Only the super admin can change it.");
+  }
+  return ok({ removed: await deleteAttendance(studentId, date, session) });
 }
 
 export async function getBatchOrCurrent(batchId?: number): Promise<Batch | undefined> {
