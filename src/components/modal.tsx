@@ -1,7 +1,6 @@
 "use client";
 
-import * as Dialog from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ReactNode } from "react";
 
 interface ModalProps {
@@ -10,45 +9,24 @@ interface ModalProps {
   title: string;
   description?: string;
   children: ReactNode;
+  layer?: "default" | "above-drawer";
+  size?: "default" | "wide";
 }
 
-export function Modal({
-  open,
-  onOpenChange,
-  title,
-  description,
-  children,
-}: ModalProps) {
+export function Modal({ open, onOpenChange, title, description, children, layer = "default", size = "default" }: ModalProps) {
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs transition-opacity duration-150 animate-in fade-in" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-neutral-200/90 bg-white p-6 shadow-2xl outline-none duration-150 animate-in fade-in zoom-in-95 dark:border-neutral-800 dark:bg-neutral-900">
-          <div className="mb-4 pr-6">
-            <Dialog.Title className="text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
-              {title}
-            </Dialog.Title>
-            {description && (
-              <Dialog.Description className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                {description}
-              </Dialog.Description>
-            )}
-          </div>
-          {children}
-          <Dialog.Close asChild>
-            <button
-              aria-label="Close dialog"
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg bg-[#1E4F91]/10 text-[#1E4F91] transition-colors hover:bg-[#1E4F91] hover:text-white focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA] dark:hover:bg-[#1E4F91] dark:hover:text-white"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent layer={layer} className={`${size === "wide" ? "max-w-lg" : "max-w-md"} max-h-[calc(100dvh-1.5rem)] gap-0`}>
+        <DialogHeader className="mb-4">
+          <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">{title}</DialogTitle>
+          {description && <DialogDescription className="text-xs leading-relaxed text-muted-foreground">{description}</DialogDescription>}
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
   );
 }
 
 Modal.Footer = function ModalFooter({ children }: { children: ReactNode }) {
-  return <div className="mt-6 flex justify-end gap-2.5">{children}</div>;
+  return <DialogFooter className="mt-6">{children}</DialogFooter>;
 };
