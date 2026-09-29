@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
 import { X, Pencil, Loader2, CalendarPlus, CheckCircle2, Download, RotateCw, CalendarDays } from "lucide-react";
 import { Modal } from "@/components/modal";
+import { formatPersonName } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
 import { useToast } from "@/components/toast-provider";
 import { formatDate, formatPostingPeriod } from "@/lib/date";
-import { ATTENDANCE_DEPARTMENT_LABEL } from "@/lib/attendance/types";
+import { ATTENDANCE_DEPARTMENT_LABEL, ATTENDANCE_SESSION_LABEL } from "@/lib/attendance/types";
 import { NepaliDateInput } from "@/components/nepali-date-input";
 import { RecordedBy } from "@/components/recorded-by";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import type { Student } from "@/lib/db/queries/students";
 import type { Batch } from "@/lib/db/queries/batches";
 import type { StudentSummary } from "@/lib/attendance/summary";
@@ -159,13 +162,11 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
 
   return (
     <>
-      <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in" />
-          <Dialog.Content className="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col border-l border-neutral-200/90 bg-white p-0 shadow-2xl outline-none duration-200 animate-in slide-in-from-right dark:border-neutral-800 dark:bg-neutral-900">
+      <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+          <SheetContent side="right" className="p-0 duration-200 animate-in slide-in-from-right dark:bg-neutral-900">
             {/* Header */}
             <div className="relative border-b border-neutral-200/80 bg-neutral-50/60 p-5 sm:p-6 dark:border-neutral-800 dark:bg-neutral-900/80">
-              <Dialog.Close asChild>
+              <SheetClose asChild>
                 <button
                   aria-label="Close intern details"
                   title="Close"
@@ -173,7 +174,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                 >
                   <X className="h-4 w-4" />
                 </button>
-              </Dialog.Close>
+              </SheetClose>
 
               {loading && !visibleData && (
                 <div className="py-2">
@@ -193,12 +194,12 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                       {visibleData.batch.name}
                     </span>
                   </div>
-                  <Dialog.Title className="mt-2 text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
-                    {visibleData.student.name}
-                  </Dialog.Title>
-                  <Dialog.Description className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  <SheetTitle className="mt-2 text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
+                    {formatPersonName(visibleData.student.name)}
+                  </SheetTitle>
+                  <SheetDescription className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                     Posting: <strong className="font-semibold text-neutral-700 dark:text-neutral-300">{formatPostingPeriod(visibleData.student.postingPeriod)}</strong>
-                  </Dialog.Description>
+                  </SheetDescription>
 
                   <div className="mt-4 flex items-center gap-2">
                     <button
@@ -271,40 +272,20 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
               </div>
             )}
 
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)} className="flex min-h-0 flex-1 flex-col">
             {/* Navigation Tabs */}
             {visibleData && !loading && (
-              <div className="flex overflow-x-auto border-b border-neutral-200/80 px-3 text-xs sm:px-6 dark:border-neutral-800">
-                <button
-                  onClick={() => setActiveTab("timeline")}
-                  className={`shrink-0 border-b-2 px-3 py-3 font-semibold transition-colors ${
-                    activeTab === "timeline"
-                      ? "border-[#1E4F91] text-[#1E4F91] dark:border-[#A9C5EA] dark:text-[#A9C5EA]"
-                      : "border-transparent text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-                  }`}
-                >
+              <TabsList className="h-auto w-full justify-start overflow-x-auto rounded-none border-b border-neutral-200/80 bg-transparent px-3 text-xs sm:px-6 dark:border-neutral-800">
+                <TabsTrigger value="timeline" className="shrink-0 rounded-none border-b-2 border-transparent px-3 py-3 text-xs font-semibold text-neutral-500 shadow-none hover:text-neutral-800 data-[state=active]:border-[#1E4F91] data-[state=active]:bg-transparent data-[state=active]:text-[#1E4F91] data-[state=active]:shadow-none dark:text-neutral-400 dark:hover:text-neutral-200 dark:data-[state=active]:border-[#A9C5EA] dark:data-[state=active]:text-[#A9C5EA]">
                   Attendance Log ({visibleData.records.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab("leaves")}
-                  className={`shrink-0 border-b-2 px-3 py-3 font-semibold transition-colors ${
-                    activeTab === "leaves"
-                      ? "border-[#1E4F91] text-[#1E4F91] dark:border-[#A9C5EA] dark:text-[#A9C5EA]"
-                      : "border-transparent text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-                  }`}
-                >
+                </TabsTrigger>
+                <TabsTrigger value="leaves" className="shrink-0 rounded-none border-b-2 border-transparent px-3 py-3 text-xs font-semibold text-neutral-500 shadow-none hover:text-neutral-800 data-[state=active]:border-[#1E4F91] data-[state=active]:bg-transparent data-[state=active]:text-[#1E4F91] data-[state=active]:shadow-none dark:text-neutral-400 dark:hover:text-neutral-200 dark:data-[state=active]:border-[#A9C5EA] dark:data-[state=active]:text-[#A9C5EA]">
                   Leaves ({visibleData.leaves.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab("info")}
-                  className={`shrink-0 border-b-2 px-3 py-3 font-semibold transition-colors ${
-                    activeTab === "info"
-                      ? "border-[#1E4F91] text-[#1E4F91] dark:border-[#A9C5EA] dark:text-[#A9C5EA]"
-                      : "border-transparent text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
-                  }`}
-                >
+                </TabsTrigger>
+                <TabsTrigger value="info" className="shrink-0 rounded-none border-b-2 border-transparent px-3 py-3 text-xs font-semibold text-neutral-500 shadow-none hover:text-neutral-800 data-[state=active]:border-[#1E4F91] data-[state=active]:bg-transparent data-[state=active]:text-[#1E4F91] data-[state=active]:shadow-none dark:text-neutral-400 dark:hover:text-neutral-200 dark:data-[state=active]:border-[#A9C5EA] dark:data-[state=active]:text-[#A9C5EA]">
                   Profile &amp; Notes
-                </button>
-              </div>
+                </TabsTrigger>
+              </TabsList>
             )}
 
             {/* Drawer Body */}
@@ -334,7 +315,8 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                 </div>
               )}
 
-              {visibleData && activeTab === "timeline" && (
+              {visibleData && (
+                <TabsContent value="timeline" className="mt-0 outline-none">
                 <div>
                   {visibleData.records.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-neutral-200/80 p-8 text-center text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
@@ -356,6 +338,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                               <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                                 {formatDate(r.date)}
                               </p>
+                              <p className="mt-0.5 text-[10px] font-medium text-neutral-500 dark:text-neutral-400">{ATTENDANCE_SESSION_LABEL[r.session]}</p>
                               {r.remarks && (
                                 <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">
                                   &quot;{r.remarks}&quot;
@@ -370,9 +353,11 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                     </div>
                   )}
                 </div>
+                </TabsContent>
               )}
 
-              {visibleData && activeTab === "leaves" && (
+              {visibleData && (
+                <TabsContent value="leaves" className="mt-0 outline-none">
                 <div className="space-y-3">
                   {visibleData.leaves.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-neutral-200/80 p-8 text-center text-sm text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
@@ -406,9 +391,11 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                     ))
                   )}
                 </div>
+                </TabsContent>
               )}
 
-              {visibleData && activeTab === "info" && (
+              {visibleData && (
+                <TabsContent value="info" className="mt-0 outline-none">
                 <div className="space-y-4 text-sm">
                   <div className="rounded-xl border border-neutral-200/80 bg-neutral-50/60 p-4 dark:border-neutral-800 dark:bg-neutral-800/40">
                     <h4 className="font-semibold text-neutral-900 dark:text-neutral-100">
@@ -439,15 +426,17 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
                     </p>
                   </div>
                 </div>
+                </TabsContent>
               )}
             </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+            </Tabs>
+          </SheetContent>
+      </Sheet>
 
       {/* Record Leave Modal (Nested outside Dialog.Portal to render properly as a separate Modal context) */}
       <Modal
         open={isLeaveModalOpen}
+        layer="above-drawer"
         onOpenChange={(open) => (open ? setIsLeaveModalOpen(true) : closeLeaveForm())}
         title="Record Leave"
         description="Every day in this range counts as a leave day for the student unless attendance is separately marked for that date."
@@ -461,11 +450,12 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
           </div>
         )}
         <form onSubmit={handleApproveLeave} className="grid gap-4 pt-2">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
               Start Date
               <NepaliDateInput
                 required
+                className="w-full"
                 value={leaveStartDate}
                 onChange={setLeaveStartDate}
               />
@@ -474,6 +464,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
               End Date
               <NepaliDateInput
                 required
+                className="w-full"
                 value={leaveEndDate}
                 onChange={setLeaveEndDate}
               />
@@ -481,7 +472,7 @@ export function StudentDrawer({ studentId, onClose, onEditStudent }: StudentDraw
           </div>
           <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
             Reason <span className="font-normal text-neutral-400">(Optional)</span>
-            <input
+            <Input
               value={leaveReason}
               onChange={(e) => setLeaveReason(e.target.value)}
               placeholder="e.g. Medical leave"
