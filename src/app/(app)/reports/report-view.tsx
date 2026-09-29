@@ -9,6 +9,10 @@ import { formatDate } from "@/lib/date";
 import type { AttendanceSummary } from "@/lib/attendance/summary";
 import { Pagination } from "@/components/pagination";
 import { NepaliDateInput } from "@/components/nepali-date-input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { formatPersonName } from "@/lib/utils";
 
 interface Props {
   batches: { id: number; name: string }[];
@@ -21,7 +25,7 @@ export function ReportView({ batches, batchId, summary }: Props) {
   const { openStudent } = useStudentDrawer();
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 20;
 
   function updateParams(patch: Record<string, string>) {
     const params = new URLSearchParams({
@@ -75,23 +79,24 @@ export function ReportView({ batches, batchId, summary }: Props) {
           <ListFilter className="h-3.5 w-3.5 text-[#1E4F91] dark:text-[#A9C5EA]" aria-hidden="true" />
           Report filters
         </div>
-        <div className="grid min-w-0 grid-cols-2 items-start gap-2 sm:grid-cols-[minmax(10rem,1.3fr)_minmax(9rem,1fr)_minmax(9rem,1fr)] sm:gap-3">
-          <label className="col-span-2 min-w-0 text-[10px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400 sm:col-span-1">
+        <div className="grid min-w-0 grid-cols-1 items-start gap-3 sm:grid-cols-[minmax(10rem,1.3fr)_minmax(9rem,1fr)_minmax(9rem,1fr)] sm:gap-3">
+          <label className="min-w-0 text-[10px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400">
             <span className="mb-1 flex items-center gap-1"><FileSpreadsheet className="h-3 w-3 text-violet-600 dark:text-violet-400" aria-hidden="true" />Batch</span>
-            <select
-              value={batchId}
-              onChange={(e) => updateParams({ batchId: e.target.value })}
-              className="report-filter-control report-filter-select block h-10 w-full min-w-0 rounded-lg border border-neutral-200 bg-neutral-50 px-2 text-[11px] font-medium text-neutral-800 outline-none transition-colors focus:border-[#1E4F91] focus:ring-2 focus:ring-[#1E4F91]/15 sm:px-2.5 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
-            >
+            <Select value={String(batchId)} onValueChange={(value) => updateParams({ batchId: value })}>
+              <SelectTrigger className="report-filter-control report-filter-select h-10 rounded-lg border-neutral-200 bg-neutral-50 text-[11px] font-medium text-neutral-800 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
             {batches.map((b) => (
-                <option key={b.id} value={b.id}>
+                <SelectItem key={b.id} value={String(b.id)}>
                   {b.name}
-                </option>
+                </SelectItem>
             ))}
-            </select>
+              </SelectContent>
+            </Select>
           </label>
           <label className="min-w-0 text-[10px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400">
-            <span className="mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3 text-blue-600 dark:text-blue-400" aria-hidden="true" />From</span>
+            <span className="mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3 text-blue-600 dark:text-blue-400" aria-hidden="true" />From date</span>
             <NepaliDateInput
               value={summary.from}
               onChange={(value) => updateParams({ from: value })}
@@ -99,7 +104,7 @@ export function ReportView({ batches, batchId, summary }: Props) {
             />
           </label>
           <label className="min-w-0 text-[10px] font-semibold leading-3 text-neutral-600 dark:text-neutral-400">
-            <span className="mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />To</span>
+            <span className="mb-1 flex items-center gap-1"><CalendarDays className="h-3 w-3 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />To date</span>
             <NepaliDateInput
               value={summary.to}
               onChange={(value) => updateParams({ to: value })}
@@ -133,7 +138,7 @@ export function ReportView({ batches, batchId, summary }: Props) {
           {/* Intern Search Bar */}
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-neutral-400" />
-            <input
+            <Input
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
               placeholder="Search intern name or roll #..."
@@ -144,22 +149,22 @@ export function ReportView({ batches, batchId, summary }: Props) {
 
         {/* Mobile Stacked Card View */}
         {/* Responsive table with compact card rows on mobile */}
-        <div className="hidden overflow-x-auto rounded-lg border border-neutral-200/60 dark:border-neutral-800 md:block">
-          <table className="w-full text-left text-xs">
-            <thead>
-            <tr className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
-                <th scope="col" className="px-4 py-3">Roll #</th>
-                <th scope="col" className="px-4 py-3">Name</th>
-                <th scope="col" className="px-4 py-3 text-right">Absent</th>
-                <th scope="col" className="px-4 py-3 text-right">Late</th>
-                <th scope="col" className="px-4 py-3 text-right">Leave</th>
-                <th scope="col" className="px-4 py-3 text-right">Total Days Off</th>
-                <th scope="col" className="px-3 py-3 text-right">Profile</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
+        <div className="hidden overflow-x-auto rounded-lg border border-neutral-200/60 dark:border-neutral-800 lg:block">
+          <Table className="w-full min-w-[720px] text-left text-xs">
+            <TableHeader>
+            <TableRow className="border-b border-neutral-200/80 bg-neutral-50/80 font-semibold uppercase tracking-wider text-neutral-500 dark:border-neutral-800 dark:bg-neutral-800/60 dark:text-neutral-400">
+                <TableHead scope="col" className="px-4 py-3">Roll #</TableHead>
+                <TableHead scope="col" className="px-4 py-3">Name</TableHead>
+                <TableHead scope="col" className="px-4 py-3 text-right">Absent</TableHead>
+                <TableHead scope="col" className="px-4 py-3 text-right">Late</TableHead>
+                <TableHead scope="col" className="px-4 py-3 text-right">Leave</TableHead>
+                <TableHead scope="col" className="px-4 py-3 text-right">Total Days Off</TableHead>
+                <TableHead scope="col" className="px-3 py-3 text-right">Profile</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-neutral-100 bg-white dark:divide-neutral-800/60 dark:bg-neutral-900">
               {visibleStudents.map((s) => (
-                <tr
+                <TableRow
                   key={s.id}
                   onClick={() => openStudent(s.id)}
                   className="group cursor-pointer transition-colors hover:bg-neutral-50/90 dark:hover:bg-neutral-800/40"
@@ -172,74 +177,78 @@ export function ReportView({ batches, batchId, summary }: Props) {
                   }}
                   title="Click to view full intern history"
                 >
-                  <td data-label="Roll #" className="px-4 py-3 font-mono font-medium text-neutral-500 group-hover:text-[#1E4F91] dark:text-neutral-400 dark:group-hover:text-[#A9C5EA]">
+                  <TableCell data-label="Roll #" className="px-4 py-3 font-mono font-medium text-neutral-500 group-hover:text-[#1E4F91] dark:text-neutral-400 dark:group-hover:text-[#A9C5EA]">
                     {s.rollNumber}
-                  </td>
-                  <td data-label="Name" className="px-4 py-3 font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">
-                    {s.name}
-                  </td>
-                  <td data-label="Absent" className="px-4 py-3 text-right font-bold text-red-600 dark:text-red-400">
+                  </TableCell>
+                  <TableCell data-label="Name" className="px-4 py-3 font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">
+                    {formatPersonName(s.name)}
+                  </TableCell>
+                  <TableCell data-label="Absent" className="px-4 py-3 text-right font-bold text-red-600 dark:text-red-400">
                     {s.absenceCount}
-                  </td>
-                  <td data-label="Late" className="px-4 py-3 text-right font-bold text-amber-600 dark:text-amber-400">
+                  </TableCell>
+                  <TableCell data-label="Late" className="px-4 py-3 text-right font-bold text-amber-600 dark:text-amber-400">
                     {s.lateCount}
-                  </td>
-                  <td data-label="Leave" className="px-4 py-3 text-right font-bold text-blue-600 dark:text-blue-400">
+                  </TableCell>
+                  <TableCell data-label="Leave" className="px-4 py-3 text-right font-bold text-blue-600 dark:text-blue-400">
                     {s.leaveDays}
-                  </td>
-                  <td data-label="Total Days Off" className="px-4 py-3 text-right font-bold text-neutral-900 dark:text-neutral-50">
+                  </TableCell>
+                  <TableCell data-label="Total Days Off" className="px-4 py-3 text-right font-bold text-neutral-900 dark:text-neutral-50">
                     {s.absentDays}d
-                  </td>
-                  <td data-label="Profile" className="px-3 py-2 text-right">
+                  </TableCell>
+                  <TableCell data-label="Profile" className="px-3 py-2 text-right">
                     <button type="button" aria-label={`View ${s.name} profile`} onClick={(event) => { event.stopPropagation(); openStudent(s.id); }} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-[#1E4F91]/8 hover:text-[#1E4F91] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:text-neutral-400 dark:hover:text-[#A9C5EA]">
                       <Eye className="h-4 w-4" aria-hidden="true" />
                     </button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               {filteredStudents.length === 0 && (
-                <tr>
-                  <td
+                <TableRow>
+                  <TableCell
                     colSpan={7}
                     className="py-8 text-center text-xs text-neutral-500 dark:text-neutral-400"
                   >
                     {summary.students.length === 0 ? "No interns are in this batch yet." : "No matching interns found."}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
-        <ul className="grid gap-2.5 md:hidden">
-          {visibleStudents.map((student) => (
-            <li key={student.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 dark:border-neutral-800 dark:bg-neutral-900">
-              <button type="button" onClick={() => openStudent(student.id)} className="flex w-full items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91]">
-                <span className="shrink-0 rounded-md bg-[#1E4F91]/8 px-2 py-1 font-mono text-xs font-bold text-[#1E4F91] dark:bg-[#1E4F91]/20 dark:text-[#A9C5EA]">#{student.rollNumber}</span>
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{student.name}</span>
-                <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-50 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300"><Eye className="h-4 w-4" /></span>
-              </button>
-              <dl className="mt-3 grid grid-cols-4 divide-x divide-neutral-100 border-t border-neutral-100 pt-3 text-center dark:divide-neutral-800 dark:border-neutral-800">
-                <Metric label="Absent" value={student.absenceCount} tone="text-red-700 dark:text-red-300" />
-                <Metric label="Late" value={student.lateCount} tone="text-amber-700 dark:text-amber-300" />
-                <Metric label="Leave" value={student.leaveDays} tone="text-blue-700 dark:text-blue-300" />
-                <Metric label="Days off" value={student.absentDays} />
-              </dl>
-            </li>
-          ))}
-          {filteredStudents.length === 0 && <li className="rounded-xl border border-dashed border-neutral-300 px-4 py-10 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">{summary.students.length === 0 ? "No interns are in this batch yet." : "No interns match this search."}</li>}
-        </ul>
+        <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-sm lg:hidden dark:border-neutral-800 dark:bg-neutral-900">
+          <Table className="w-full min-w-[560px] border-collapse text-left text-xs">
+            <caption className="sr-only">Intern attendance breakdown. Select a row to open an intern profile.</caption>
+            <TableHeader className="sticky top-0 z-10 bg-neutral-50 dark:bg-neutral-800">
+              <TableRow className="border-b border-neutral-200 text-[10px] font-semibold uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
+                <TableHead scope="col" className="sticky left-0 z-20 bg-neutral-50 px-3 py-3 dark:bg-neutral-800">Intern</TableHead>
+                <TableHead scope="col" className="px-3 py-3 text-right">Absent</TableHead>
+                <TableHead scope="col" className="px-3 py-3 text-right">Late</TableHead>
+                <TableHead scope="col" className="px-3 py-3 text-right">Leave</TableHead>
+                <TableHead scope="col" className="px-3 py-3 text-right">Days off</TableHead>
+                <TableHead scope="col" className="px-3 py-3 text-center">Profile</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              {visibleStudents.map((student) => (
+                <TableRow key={student.id} onClick={() => openStudent(student.id)} className="cursor-pointer transition-colors hover:bg-blue-50/70 dark:hover:bg-blue-950/20">
+                  <TableHead scope="row" className="sticky left-0 bg-white px-3 py-3 text-left dark:bg-neutral-900">
+                    <span className="block whitespace-nowrap font-mono text-[10px] font-semibold text-[#1E4F91] dark:text-[#A9C5EA]">Roll #{student.rollNumber}</span>
+                    <span className="mt-0.5 block max-w-[11rem] truncate text-xs font-semibold text-neutral-900 dark:text-neutral-100">{formatPersonName(student.name)}</span>
+                  </TableHead>
+                  <TableCell className="px-3 py-3 text-right font-semibold tabular-nums text-red-700 dark:text-red-300">{student.absenceCount}</TableCell>
+                  <TableCell className="px-3 py-3 text-right font-semibold tabular-nums text-amber-700 dark:text-amber-300">{student.lateCount}</TableCell>
+                  <TableCell className="px-3 py-3 text-right font-semibold tabular-nums text-blue-700 dark:text-blue-300">{student.leaveDays}</TableCell>
+                  <TableCell className="px-3 py-3 text-right font-bold tabular-nums text-neutral-900 dark:text-neutral-100">{student.absentDays}</TableCell>
+                  <TableCell className="px-3 py-2 text-center"><button type="button" aria-label={`View ${student.name} profile`} onClick={(event) => { event.stopPropagation(); openStudent(student.id); }} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-[#1E4F91]/10 hover:text-[#1E4F91] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:text-neutral-400 dark:hover:text-[#A9C5EA]"><Eye className="h-4 w-4" aria-hidden="true" /></button></TableCell>
+                </TableRow>
+              ))}
+              {filteredStudents.length === 0 && <TableRow><TableCell colSpan={6} className="px-4 py-10 text-center text-sm text-neutral-500">{summary.students.length === 0 ? "No interns are in this batch yet." : "No matching interns found."}</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </div>
         <Pagination page={visiblePage} pageCount={pageCount} total={filteredStudents.length} pageSize={pageSize} onPageChange={setPage} />
       </Card>
-    </div>
-  );
-}
-
-function Metric({ label, value, tone }: { label: string; value: number; tone?: string }) {
-  return (
-    <div className="min-w-0 px-1.5 first:pl-0 last:pr-0">
-      <dt className="truncate text-[9px] font-semibold uppercase tracking-wide text-neutral-400">{label}</dt>
-      <dd className={`mt-1 text-sm font-bold tabular-nums ${tone ?? "text-neutral-800 dark:text-neutral-100"}`}>{value}</dd>
     </div>
   );
 }
