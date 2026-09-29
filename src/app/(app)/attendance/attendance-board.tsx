@@ -12,9 +12,11 @@ import type { DayListRow } from "@/lib/attendance/service";
 import type { Student } from "@/lib/db/queries/students";
 import { createSuccessAudioContext, useToast } from "@/components/toast-provider";
 import { Search, CheckCircle2, UserX, Clock, CalendarX, Plus, Loader2, UserPlus, Stethoscope, HeartPulse, ScanFace, Brain, Hospital } from "lucide-react";
-import type { AttendanceDepartment, AttendanceStatus } from "@/lib/attendance/types";
+import type { AttendanceDepartment, AttendanceSession, AttendanceStatus } from "@/lib/attendance/types";
 import { ATTENDANCE_DEPARTMENT_LABEL } from "@/lib/attendance/types";
 import { RecordedBy } from "@/components/recorded-by";
+import { Input } from "@/components/ui/input";
+import { formatPersonName } from "@/lib/utils";
 
 type Status = AttendanceStatus;
 
@@ -98,6 +100,7 @@ export function AttendanceBoard({
   const [selectedStudent, setSelectedStudent] = useState<SelectedStudent | null>(null);
   const [activeStatusMarking, setActiveStatusMarking] = useState<Status | null>(null);
   const [confirmPresentFor, setConfirmPresentFor] = useState<DayListRow | null>(null);
+  const [session, setSession] = useState<AttendanceSession>("morning");
 
   const [records, setRecords] = useState(initialRecords);
   const [prevInitialRecords, setPrevInitialRecords] = useState(initialRecords);
@@ -119,7 +122,7 @@ export function AttendanceBoard({
     if (!q) return [];
 
     const filtered = allStudents.filter((s) => {
-      if (markedByStudentId.get(s.id)?.status === "absent") return false;
+      if (records.some((row) => row.studentId === s.id && row.session === session && row.status === "absent")) return false;
       const r = s.rollNumber.toLowerCase();
       const n = s.name.toLowerCase();
       return r === q || r.startsWith(q) || n.includes(q);
@@ -136,7 +139,7 @@ export function AttendanceBoard({
         return aR.localeCompare(bR, undefined, { numeric: true });
       })
       .slice(0, 8);
-  }, [allStudents, markedByStudentId, searchQuery]);
+  }, [allStudents, records, searchQuery, session]);
 
   function changeDate(newDate: string) {
     startTransition(() => router.push(`/attendance?date=${newDate}`));
@@ -161,6 +164,7 @@ export function AttendanceBoard({
         rollNumber: targetStudent.rollNumber,
         name: targetStudent.name,
         status,
+        session,
         department: department ?? null,
         remarks: null,
         markedByName: "You",
@@ -176,6 +180,7 @@ export function AttendanceBoard({
         body: JSON.stringify({
           studentId: targetStudent.id,
           date,
+          session,
           status,
           department: department ?? null,
           remarks: null,
@@ -216,11 +221,11 @@ export function AttendanceBoard({
     const successAudio = createSuccessAudioContext();
 
     const previousRecords = [...records];
-    setRecords((prev) => prev.filter((r) => r.studentId !== studentId));
+    setRecords((prev) => prev.filter((r) => !(r.studentId === studentId && r.session === target.session)));
 
     try {
       const res = await fetch(
-        `/api/attendance?studentId=${studentId}&date=${date}`,
+        `/api/attendance?studentId=${studentId}&date=${date}&session=${target.session}`,
         { method: "DELETE" },
       );
       if (!res.ok) {
@@ -248,6 +253,7 @@ export function AttendanceBoard({
   const sortedRecords = [...records].sort((a, b) =>
     a.rollNumber.localeCompare(b.rollNumber, undefined, { numeric: true }),
   );
+  const sessionRecords = sortedRecords.filter((r) => r.session === session);
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -290,10 +296,18 @@ export function AttendanceBoard({
 
       {/* Main Records Container */}
       <Card className={isPending ? "opacity-60 transition-opacity" : ""}>
+        <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800">
+          {(["morning", "ward"] as const).map((value) => (
+            <button key={value} type="button" onClick={() => setSession(value)} aria-pressed={session === value}
+              className={`rounded-md px-3 py-2 text-xs font-semibold transition-colors ${session === value ? "bg-white text-[#1E4F91] shadow-sm dark:bg-neutral-700 dark:text-white" : "text-neutral-500"}`}>
+              {value === "morning" ? "Morning Conference" : "Round / OPDs"}
+            </button>
+          ))}
+        </div>
         <div className="mb-4 flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-2">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-[#1E4F91] dark:text-[#A9C5EA]" aria-hidden="true" />
-            <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">Attendance updates <span className="ml-1 font-medium tabular-nums text-neutral-500">({sortedRecords.length})</span></h2>
+            <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">{session === "morning" ? "Morning Conference" : "Round / OPDs"} attendance <span className="ml-1 font-medium tabular-nums text-neutral-500">({sessionRecords.length} recorded)</span></h2>
           </div>
           <span className="shrink-0 rounded-md bg-neutral-50 px-2.5 py-1.5 text-[11px] font-medium tabular-nums text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
             {formatDate(date)}
@@ -308,39 +322,33 @@ export function AttendanceBoard({
             <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Add interns first</p>
             <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-neutral-500 dark:text-neutral-400">There are no interns in this batch yet. Add interns before recording attendance.</p>
           </div>
-        ) : sortedRecords.length === 0 ? (
-          <div className="overflow-hidden rounded-xl border border-emerald-200/80 bg-emerald-50/40 dark:border-emerald-900/60 dark:bg-emerald-950/15">
-            <div className="flex items-center gap-3 px-4 py-4 sm:px-5">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300"><CheckCircle2 className="h-5 w-5" /></span>
-              <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-emerald-950 dark:text-emerald-100">No exceptions today</p><p className="mt-0.5 text-xs text-emerald-800/80 dark:text-emerald-300/80">All {allStudents.length} interns are marked present for this date.</p></div>
-              <span className="hidden rounded-full border border-emerald-200 bg-white/80 px-2.5 py-1 text-[10px] font-semibold text-emerald-800 sm:inline-flex dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">Clear</span>
-            </div>
-          </div>
         ) : (
           <ul className="grid gap-2.5">
-            {sortedRecords.map((r) => (
+            {allStudents.map((student) => {
+              const r = sessionRecords.find((record) => record.studentId === student.id);
+              return (
               <li
-                key={r.studentId}
-                onClick={() => openStudent(r.studentId)}
+                key={`${student.id}-${session}`}
+                onClick={() => openStudent(student.id)}
                 className="group flex min-w-0 cursor-pointer flex-col gap-2 border-b border-neutral-100 px-1 py-3 text-xs transition-colors last:border-0 hover:bg-neutral-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1E4F91] dark:border-neutral-800 dark:hover:bg-neutral-800/30 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-2"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    openStudent(r.studentId);
+                    openStudent(student.id);
                   }
                 }}
               >
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md font-mono text-[10px] font-semibold ${r.status === "absent" ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300" : r.status === "late" ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300" : r.status === "present" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300" : "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"}`}>
-                    #{r.rollNumber}
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md font-mono text-[10px] font-semibold ${r?.status === "absent" ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300" : r?.status === "late" ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300" : r?.status === "present" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300" : "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"}`}>
+                    #{student.rollNumber}
                   </span>
-                  <span className="min-w-0"><span className="block truncate text-sm font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">{r.name}</span><RecordedBy name={r.markedByName} /></span>
+                  <span className="min-w-0"><span className="block truncate text-sm font-semibold text-neutral-900 group-hover:text-[#1E4F91] dark:text-neutral-100 dark:group-hover:text-[#A9C5EA]">{formatPersonName(student.name)}</span>{r ? <RecordedBy name={r.markedByName} /> : <span className="text-[10px] font-medium text-neutral-500">No attendance recorded yet</span>}</span>
                 </div>
                 <div className="flex min-w-0 items-center justify-between gap-1.5 sm:shrink-0 sm:justify-end sm:gap-2">
-                  <StatusBadge status={r.status} />
-                  {r.department && <DepartmentBadge department={r.department} />}
-                  {r.source === "record" && (
+                  {r ? <StatusBadge status={r.status} /> : <span className="rounded-md border border-neutral-200 px-2 py-1 text-[10px] font-semibold text-neutral-500 dark:border-neutral-700">Not recorded</span>}
+                  {r?.department && <DepartmentBadge department={r.department} />}
+                  {r?.source === "record" && (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -349,7 +357,7 @@ export function AttendanceBoard({
                       }}
                       disabled={isClearing}
                       className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-emerald-700 transition-colors hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:cursor-wait disabled:opacity-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-200 sm:ml-0"
-                      aria-label={`Mark ${r.name} present`}
+                      aria-label={`Mark ${student.name} present`}
                       title="Mark present"
                     >
                       {isClearing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
@@ -357,7 +365,7 @@ export function AttendanceBoard({
                   )}
                 </div>
               </li>
-            ))}
+            );})}
           </ul>
         )}
       </Card>
@@ -413,7 +421,7 @@ export function AttendanceBoard({
               )}
               <div className="relative">
                 <Search className="absolute left-3.5 top-3 h-4 w-4 text-neutral-400" />
-                <input
+                <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search intern by roll number or name..."
@@ -439,7 +447,7 @@ export function AttendanceBoard({
                               #{s.rollNumber}
                             </span>
                             <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                              {s.name}
+                              {formatPersonName(s.name)}
                             </span>
                           </div>
                           {marked ? (
@@ -470,7 +478,7 @@ export function AttendanceBoard({
                     Roll #{selectedStudent.rollNumber}
                   </span>
                   <h3 className="font-bold text-neutral-900 dark:text-neutral-50 text-sm mt-0.5">
-                    {selectedStudent.name}
+                    {formatPersonName(selectedStudent.name)}
                   </h3>
                 </div>
                 <button
