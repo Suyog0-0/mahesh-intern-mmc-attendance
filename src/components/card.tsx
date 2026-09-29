@@ -1,20 +1,6 @@
-import React from "react";
+import { Card } from "@/components/ui/card";
 
-export function Card({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`rounded-xl border border-[#e2eaf4] bg-white p-5 shadow-xs transition-shadow dark:border-neutral-800/80 dark:bg-neutral-900/60 ${className}`}
-    >
-      {children}
-    </div>
-  );
-}
+export { Card };
 
 export function StatTile({
   label,
@@ -29,21 +15,9 @@ export function StatTile({
 }) {
   return (
     <Card className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-        {label}
-      </span>
-      <span
-        className={`text-2xl font-bold tracking-tight ${
-          tone ?? "text-neutral-900 dark:text-neutral-50"
-        }`}
-      >
-        {value}
-      </span>
-      {subtitle && (
-        <span className="text-xs text-neutral-500 dark:text-neutral-400">
-          {subtitle}
-        </span>
-      )}
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className={`text-2xl font-bold tracking-tight ${tone ?? "text-foreground"}`}>{value}</span>
+      {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
     </Card>
   );
 }
